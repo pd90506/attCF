@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 import requests
 import zipfile
 from tqdm import tqdm
@@ -72,12 +71,12 @@ def convert_100k(source_dir, target_dir):
     target_movie = target_dir + '/ml-100k.movies'
 
     # from source data to target data
-    col_names = ['user_id', 'movie_id', 'rating', 'time_stamp']
+    col_names = ['uid', 'mid', 'rating', 'timestamp']
     data = pd.read_csv(source_data, sep='\t', names=col_names)
     data.to_csv(target_data, index=False)
 
     # from source movie to target movie
-    col_names = ['movie_id', 'title', 'release_date', 'video_release_date',
+    col_names = ['mid', 'title', 'release_date', 'video_release_date',
                  'imdb_url', 'unknown', 'Action', 'Adventure', 'Animation',
                  'Children', 'Comedy', 'Crime', 'Documentary', 'Drama',
                  'Fantasy', 'Film-Noir', 'Horror', 'Musical', 'Mystery',
@@ -85,7 +84,7 @@ def convert_100k(source_dir, target_dir):
                  'Thriller', 'War', 'Western']
     movies = pd.read_csv(source_movie, sep='|', names=col_names,
                          encoding='latin-1')
-    movies = movies[['movie_id', 'Action', 'Adventure',
+    movies = movies[['mid', 'Action', 'Adventure',
                      'Animation', 'Children', 'Comedy', 'Crime',
                      'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
                      'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
@@ -112,34 +111,30 @@ def convert_1m(source_dir, target_dir):
     target_movie = target_dir + '/ml-1m.movies'
 
     # from source data to target data
-    col_names = ['user_id', 'movie_id', 'rating', 'time_stamp']
+    col_names = ['uid', 'mid', 'rating', 'timestamp']
     data = pd.read_csv(source_data, sep='::', names=col_names)
     data.to_csv(target_data, index=False)
 
     # from source movies to target movies
-    
-
-def genre_to_int_list(genre_string):
-    """
-    Convert the list of genre names to a list of integer codes
-    Args: 
-        genre_string: a string of genres names.
-    """
-    GENRES = ('Action', 'Adventure', 'Animation', 'Children', 'Comedy',
-              'Crime', 'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
-              'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller',
-              'War', 'Western')
-    GENRES_LC = tuple((x.lower() for x in GENRES))
-    # convert to lower case
-    genre_string_lc = genre_string.lower()
-    genre_list = []
-    for idx in range(len(GENRES_LC)):
-        if GENRES_LC[idx] in genre_string_lc:
-            genre_list.append(idx)
-    if len(genre_list) == 0:
-        genre_list.append(-1)
-    return genre_list
-
+    col_names = ['mid', 'title', 'genre']
+    movies = pd.read_csv(source_movie, sep='::', names=col_names)
+    # Processing genre_list column
+    movies['genre_list'] = movies['genre'].apply(genre_to_int_list)
+    new_df = movies['genre'].apply(genre_to_int_list)
+    a = new_df.apply(lambda x: pd.Series(x))
+    a['mid'] = a.index + 1
+    col_names = ['Action', 'Adventure',
+                 'Animation', 'Children', 'Comedy', 'Crime',
+                 'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
+                 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
+                 'Thriller', 'War', 'Western', 'mid']
+    a.columns = col_names
+    a = a[['mid', 'Action', 'Adventure',
+           'Animation', 'Children', 'Comedy', 'Crime',
+           'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
+           'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
+           'Thriller', 'War', 'Western']]
+    a.to_csv(target_movie, index=False)
 
 
 def genre_to_int_list(genre_string):
@@ -158,59 +153,12 @@ def genre_to_int_list(genre_string):
     genre_list = []
     for idx in range(len(GENRES_LC)):
         if GENRES_LC[idx] in genre_string_lc:
-            genre_list.append(idx)
-    if len(genre_list) == 0:
-        genre_list.append(-1)
+            genre_list.append(1)
+        else:
+            genre_list.append(0)
     return genre_list
-
-
-def loadMLData(file_dir, movie_dir):
-    """
-    Args:
-        file_dir: the directory of the data file
-        movie_dir: the directory of the movie title genre data file
-    Load the MovieLens dataset, need to be a csv file
-    """
-
-    # read data from file and combine by merging,
-    # select interested columns
-    ml_rating = pd.read_csv(file_dir, header=0, \
-                            names=['uid', 'mid', 'rating', 'timestamp'])
-    mv_df = pd.read_csv(movie_dir, header=0, \
-                            names=['mid', 'title', 'genre_string'])
-    mv_df['genre'] = mv_df['genre_string'].apply(genre_to_single_int) # choose which kind of genre to output
-    ml_rating = pd.merge(ml_rating, mv_df, on=['mid'], how='left')
-    ml_rating = ml_rating.dropna()
-    ml_rating = ml_rating[['uid', 'mid', 'rating', 'genre']]
-
-    # Reindex 
-    item_id = ml_rating[['mid']].drop_duplicates()
-    item_id['itemId'] = np.arange(len(item_id))
-    ml_rating = pd.merge(ml_rating, item_id, on=['mid'], how='left')
-    ml_rating = ml_rating.dropna()
-
-    mv_df_new = pd.merge(mv_df, item_id, on=['mid'], how='left')
-    mv_df_new = mv_df_new.dropna()
-    mv_df_new = mv_df_new[['itemId', 'genre']].astype(int)
-
-    user_id = ml_rating[['uid']].drop_duplicates()
-    user_id['userId'] = np.arange(len(user_id))
-    ml_rating = pd.merge(ml_rating, user_id, on=['uid'], how='left')
-    
-    
-    #ml_rating['rating'] = ml_rating['rating'] # astype(int)
-
-    ml_rating = ml_rating[['userId', 'itemId', 'rating', 'genre']]
-    
-    # Data prepared
-    print('Range of userId is [{}, {}]'.format(ml_rating.userId.min(), \
-          ml_rating.userId.max()))
-    print('Range of itemId is [{}, {}]'.format(ml_rating.itemId.min(), \
-          ml_rating.itemId.max()))
-    return(ml_rating, mv_df_new)
-
 
 
 if __name__ == "__main__":
-    create_csv_data(source_dir=)
-
+    create_csv_data(source_dir='ml-100k')
+    create_csv_data(source_dir='ml-1m')
