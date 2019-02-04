@@ -1,6 +1,19 @@
 {
-    "python.pythonPath": "/Users/panda/anaconda3/envs/tf1.12/bin/python",
+    "python.pythonPath": "/Users/panda/anaconda3/envs/tf/bin/python",
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "python.unitTest.unittestArgs": [
+        "-v",
+        "-s",
+        "./test",
+        "-p",
+        "test_*.py"
+    ],
+    "python.unitTest.pyTestEnabled": false,
+    "python.unitTest.nosetestsEnabled": false,
+    "python.unitTest.unittestEnabled": true
 }
