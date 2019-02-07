@@ -11,7 +11,7 @@ class ModelTestCase(unittest.TestCase):
         # Model param initializing
         self.num_users = 6040
         self.num_items = 3706
-        self.num_tasks = 19
+        self.num_tasks = 18
         self.e_dim = 16
         self.f_dim = 8
         self.reg = 0

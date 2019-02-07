@@ -6,6 +6,7 @@ from time import time
 from olddatasetclass import Dataset
 from evaluate_legacy_1 import evaluate_model
 from tensorflow.keras.optimizers import Adam
+from item_to_genre import item_to_genre
 
 
 class Args(object):
@@ -15,13 +16,13 @@ class Args(object):
         self.dataset = 'ml-1m'
         self.epochs = 20
         self.batch_size = 256
-        self.num_tasks = 19
+        self.num_tasks = 18
         self.e_dim = 16
         self.f_dim = 8
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        # self.learner = 'adam'
+        # self.learner = 'adam' 
 
 
 def get_train_instances(train, num_negatives):
@@ -79,7 +80,8 @@ def fit():
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
+    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy',
+                  loss_weights=[0.8, 0.2])
 
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK,
@@ -88,13 +90,14 @@ def fit():
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
 
-    dummy_genre = np.random.randn(4970845, args.num_tasks)
+    # dummy_genre = np.random.randn(4970845, args.num_tasks)
 
     # Training model
     for epoch in range(int(args.epochs)):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, args.num_neg)
+        dummy_genre = item_to_genre(item_input)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels), dummy_genre], # labels 
