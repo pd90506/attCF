@@ -23,7 +23,7 @@ class Args(object):
     def __init__(self):
         self.path = 'Data/'
         self.dataset = 'ml-1m'
-        self.epochs = 20
+        self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8
         self.layers = '[64,32,16,8]'
@@ -34,6 +34,7 @@ class Args(object):
         self.learner = 'adam'
         self.verbose = 0
         self.out = 1
+        self.K = 10
         self.mf_pretrain = ''
         self.mlp_pretrain= ''
 
@@ -156,11 +157,11 @@ def fit():
     # args.dataset = name_data
     # args.batch_size = batch_size
             
-    topK = 10
+    topK = args.K
     evaluation_threads = 1#mp.cpu_count()
     print("NeuMF arguments: %s " %(args))
     model_out_file = 'Pretrain/%s_NeuMF_%d_%s_%d.h5' %(args.dataset, mf_dim, args.layers, time())
-    result_out_file = 'outputs/%s_NeuMF_%d_%s_%d.csv' %(args.dataset, mf_dim, args.layers, time())
+    result_out_file = 'outputs/%s_NeuMF_%d_%s_top%d_%d.csv' %(args.dataset, mf_dim, args.layers, args.K, time())
 
      # Loading data
     t1 = time()
@@ -208,8 +209,9 @@ def fit():
         model.save_weights(model_out_file, overwrite=True) 
 
     # save Hit ratio and ndcg, loss
-    output = pd.DataFrame(columns=['hr', 'ndcg'])
-    output.loc[0] = [hr, ndcg]
+    output = pd.DataFrame(columns=['hr', 'ndcg', 'loss'])
+    loss = 1.0 ## TODO
+    output.loc[0] = [hr, ndcg, loss]
     
 
 
@@ -240,7 +242,7 @@ def fit():
     if args.out > 0:
         print("The best NeuMF model is saved to %s" %(model_out_file))
 
-    output.to_csv(result_out_file)
+    output.to_csv(result_out_file, index=False)
     return([best_iter, best_hr, best_ndcg])
 
 

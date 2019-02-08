@@ -7,6 +7,7 @@ from olddatasetclass import Dataset
 from evaluate_legacy_1 import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
+import pandas as pd
 
 
 class Args(object):
@@ -14,7 +15,7 @@ class Args(object):
     def __init__(self):
         self.path = 'Data/'
         self.dataset = 'ml-1m'
-        self.epochs = 20
+        self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
         self.e_dim = 16
@@ -22,6 +23,8 @@ class Args(object):
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
+        self.loss_weights = [0.9, 0.1]
+        self.K = 10
         # self.learner = 'adam' 
 
 
@@ -46,9 +49,10 @@ def get_train_instances(train, num_negatives):
     return user_input, item_input, labels
 
 
-def fit():
-    args = Args()
-    topK = 10
+def fit(args=Args()):
+    # args = Args()
+    result_out_file = 'outputs/%s_attcf_%s_top%d_%d.csv' %(args.dataset, args.loss_weights, args.K,time())
+    topK = args.K
     evaluation_threads = 1  # mp.cpu_count()
     print("Att-Mul-MF arguments: %s " % (args))
 
@@ -81,7 +85,7 @@ def fit():
                       reg=args.reg)
 
     model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy',
-                  loss_weights=[0.8, 0.2])
+                  loss_weights=args.loss_weights)
 
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK,
@@ -91,6 +95,11 @@ def fit():
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
 
     # dummy_genre = np.random.randn(4970845, args.num_tasks)
+
+    # save Hit ratio and ndcg, loss
+    output = pd.DataFrame(columns=['hr', 'ndcg', 'loss'])
+    loss = 1.0 ## TODO
+    output.loc[0] = [hr, ndcg, loss]
 
     # Training model
     for epoch in range(int(args.epochs)):
@@ -103,6 +112,7 @@ def fit():
                          [np.array(labels), dummy_genre], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=0, shuffle=True)
         t2 = time()
+
         
         # Evaluation
         if epoch %1 == 0:
@@ -112,9 +122,15 @@ def fit():
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
             if ndcg > best_ndcg:
                 best_hr, best_ndcg, best_iter = hr, ndcg, epoch
+            
+            output.loc[epoch+1] = [hr, ndcg, loss]
     
+    output.to_csv(result_out_file, index=False)
     print("End. Best Iteration %d:  HR = %.4f, NDCG = %.4f. " %(best_iter, best_hr, best_ndcg))
 
 
 if __name__ == '__main__':
-    fit()
+    args1 = Args()
+    args1.loss_weights = [0.95, 0.05]
+    args1.K = 20
+    fit(args1)
