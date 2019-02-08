@@ -194,7 +194,7 @@ def sample_ml(data_size='ml-100k', target_dir='Data'):
     # define the file names of train, test and negatives
     train_file = target_dir + '/' + data_size + '.train.rating'
     test_file = target_dir + '/' + data_size + '.test.rating'
-    test_negatives = target_dir + '/' + data_size + '.test.negatives'
+    test_negatives = target_dir + '/' + data_size + '.test.negative'
     # load the source data file
     source_dir = 'movielens/' + data_size + '.ratings'
     ratings = pd.read_csv(source_dir, header=0)

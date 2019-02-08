@@ -3,7 +3,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
 from time import time
-from olddatasetclass import Dataset
+from olddatasetclass_1 import Dataset
 from evaluate_legacy_1 import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
@@ -131,6 +131,6 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
+    args1.dataset = 'ml-100k'
     args1.loss_weights = [0.95, 0.05]
-    args1.K = 20
     fit(args1)
