@@ -130,7 +130,10 @@ def fit(args=Args()):
 
 
 if __name__ == '__main__':
-    args1 = Args()
-    args1.dataset = 'ml-100k'
-    args1.loss_weights = [0.95, 0.05]
-    fit(args1)
+    weight_range = np.arange(0.0, 1.0, 0.1) 
+    # array([0. , 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    for i in weight_range:
+        args = Args()
+        args.loss_weights = [1 - i, i]
+        fit(args)
+
