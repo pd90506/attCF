@@ -22,7 +22,7 @@ class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-1m'
+        self.dataset = 'ml-100k'
         self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8
@@ -167,7 +167,7 @@ def fit():
     t1 = time()
     if args.dataset=='ml-1m':
         num_users = 6040
-        num_items = 3706 # need modification
+        num_items = 3960 # need modification
     elif args.dataset=='ml-100k':
         num_users = 943
         num_items = 1682

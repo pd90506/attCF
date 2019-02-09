@@ -122,13 +122,14 @@ def convert_1m(source_dir, target_dir):
     movies['genre_list'] = movies['genre'].apply(genre_to_int_list)
     new_df = movies['genre'].apply(genre_to_int_list)
     a = new_df.apply(lambda x: pd.Series(x))
-    a['mid'] = a.index
+    a['mid'] = movies['mid'].apply(lambda x: x - 1)
     col_names = ['Action', 'Adventure',
                  'Animation', 'Children', 'Comedy', 'Crime',
                  'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
                  'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
                  'Thriller', 'War', 'Western', 'mid']
     a.columns = col_names
+    
     a = a[['mid', 'Action', 'Adventure',
            'Animation', 'Children', 'Comedy', 'Crime',
            'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
