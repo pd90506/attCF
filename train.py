@@ -60,7 +60,7 @@ def fit(args=Args()):
     t1 = time()
     if args.dataset == 'ml-1m':
         num_users = 6040
-        num_items = 3706  # need modification
+        num_items = 3952  # need modification
     elif args.dataset == 'ml-100k':
         num_users = 943
         num_items = 1682
@@ -106,7 +106,7 @@ def fit(args=Args()):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, args.num_neg)
-        dummy_genre = item_to_genre(item_input)
+        dummy_genre = item_to_genre(item_input, data_size=args.dataset)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels), dummy_genre], # labels 
@@ -131,6 +131,6 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
-    args1.dataset = 'ml-100k'
+    args1.dataset = 'ml-1m'
     args1.loss_weights = [0.95, 0.05]
     fit(args1)

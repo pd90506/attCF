@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/home/panda/.conda/envs/tf/bin/python",
+    "python.pythonPath": "/Users/panda/anaconda3/envs/tf/bin/python",
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": true,
     "python.linting.enabled": true,
