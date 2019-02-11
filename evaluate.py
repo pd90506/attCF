@@ -1,4 +1,6 @@
 import pandas as pd
+import heapq  # for retrieving top K
+import numpy as np
 
 
 def evaluate_model(model, testRatings, testNegatives, K):
@@ -9,7 +11,7 @@ def evaluate_model(model, testRatings, testNegatives, K):
         testRatings: rating dataframe for test
         testNegatives: negative lists for each user in test set
         K: top K evaluation
-    Return: 
+    Return:
         score of each test rating. (Hit_Ratio, NDCG)
     """
     hits, ndcgs = [], []
@@ -19,5 +21,11 @@ def evaluate_model(model, testRatings, testNegatives, K):
         ndcgs.append(ndcg)
 
 
-def eval_one_rating(idx, row):
+def string_to_array(source_string):
+    """
+    Convert a quoted list to true nparray
+    """
+    lst = eval(source_string)
+    target_array = np.asarray(lst)
+    return target_array
     

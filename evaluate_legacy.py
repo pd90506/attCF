@@ -52,8 +52,8 @@ def evaluate_model(model, testRatings, testNegatives, K, num_thread):
 
 def eval_one_rating(idx, row):
     rating = row
-    items = _testNegatives[idx][1]
-    items = eval(items) # convert to a list
+    items = _testNegatives[idx][1:-1]
+    # items = eval(items) # convert to a list
     u = rating['uid']
     gtItem = rating['mid']
     items.append(int(gtItem))

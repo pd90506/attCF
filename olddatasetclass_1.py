@@ -1,4 +1,13 @@
 import pandas as pd
+import numpy as np
+
+
+def string_to_array(source_string):
+    """
+    Convert a quoted list to list
+    """
+    lst = eval(source_string)
+    return lst
 
 
 class Dataset(object):
@@ -24,9 +33,12 @@ class Dataset(object):
     #     return negativeList
 
     def load_negatives(self, path):
-        negatives = pd.read_csv(path, sep=',', header=0)
-        negativeList = negatives.values.tolist()
-        return negativeList
+        col_names = ['uid', 'negative_samples']
+        negatives = pd.read_csv(path, sep=',', header=0,
+                                names=col_names, index_col='uid')
+        negatives['neg_array'] = negatives['negative_samples'].apply(
+            string_to_array)
+        return negatives['neg_array']
 
     # def load_genre(self, path):
     #     genre = pd.read_csv(path, header=0, names=['itemId', 'genre'])

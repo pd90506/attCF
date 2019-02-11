@@ -3,7 +3,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
 from time import time
-from olddatasetclass_1 import Dataset
+from olddatasetclass import Dataset
 from evaluate_legacy_1 import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
@@ -30,7 +30,7 @@ class Args(object):
 
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [], [], []
-    num_items = len(train['mid'].unique())
+    num_items = train['mid'].max()
     for _, row in train.iterrows():
         # positive instance
         u = row['uid']
@@ -109,7 +109,7 @@ def fit(args=Args()):
         dummy_genre = item_to_genre(item_input, data_size=args.dataset)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
-                         [np.array(labels), dummy_genre], # labels 
+                         [np.array(labels), np.array(dummy_genre)], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=0, shuffle=True)
         t2 = time()
 
@@ -139,5 +139,5 @@ if __name__ == '__main__':
 
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [0.95, 0.05]
+    args1.loss_weights = [1, 0]
     fit(args1)

@@ -43,8 +43,9 @@ def evaluate_model(model, testRatings, testNegatives, K, num_thread):
         ndcgs = [r[1] for r in res]
         return (hits, ndcgs)
     # Single thread
+
     for idx, row in testRatings.iterrows():
-        (hr,ndcg) = eval_one_rating(idx, row)
+        (hr,ndcg) = eval_one_rating(idx, row) # idx is index, not uid!!!
         hits.append(hr)
         ndcgs.append(ndcg)
           
@@ -52,8 +53,8 @@ def evaluate_model(model, testRatings, testNegatives, K, num_thread):
 
 def eval_one_rating(idx, row):
     rating = row
-    items = _testNegatives[idx][1]
-    items = eval(items) # convert to a list
+    items = _testNegatives[idx][1:-1]
+    # items = eval(items) # convert to a list
     u = rating['uid']
     gtItem = rating['mid']
     items.append(int(gtItem))

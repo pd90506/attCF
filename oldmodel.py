@@ -21,8 +21,8 @@ import sys
 class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
-        self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.path = 'DataOld/'
+        self.dataset = 'ml-1m'
         self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8

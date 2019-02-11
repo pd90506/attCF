@@ -10,6 +10,7 @@ class ItemToGenreTestCase(unittest.TestCase):
 
     def test_dim(self):
         genre = item_to_genre(self.item)
+        print(genre)
         self.assertEqual(genre.shape, (5, 18))
 
 

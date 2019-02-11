@@ -14,8 +14,8 @@ class Dataset(object):
         # assert self.test_ratings.shape[0] == self.negatives.shape[0]
 
     def load_train_ratings(self, path):
-        col_names = ['uid', 'mid', 'rating']
-        train_ratings = pd.read_csv(path, sep=',', header=0, names=col_names)
+        col_names = ['uid', 'mid', 'rating', 'time']
+        train_ratings = pd.read_csv(path, sep='\t', header=None, names=col_names)
         return train_ratings
 
     # def load_negatives(self, path):
@@ -24,7 +24,7 @@ class Dataset(object):
     #     return negativeList
 
     def load_negatives(self, path):
-        negatives = pd.read_csv(path, sep=',', header=0)
+        negatives = pd.read_csv(path, sep='\t', header=None)
         negativeList = negatives.values.tolist()
         return negativeList
 
