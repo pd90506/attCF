@@ -22,7 +22,7 @@ class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.dataset = 'ml-1m'
         self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8
@@ -213,13 +213,13 @@ def fit():
     loss = 1.0 ## TODO
     output.loc[0] = [hr, ndcg, loss]
     
-
+    # Generate training instances
+    user_input, item_input, labels = get_train_instances(train, num_negatives)
 
     # Training model
     for epoch in range(int(num_epochs)):
         t1 = time()
-        # Generate training instances
-        user_input, item_input, labels = get_train_instances(train, num_negatives)
+        
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          np.array(labels), # labels 

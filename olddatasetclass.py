@@ -25,8 +25,8 @@ class Dataset(object):
 
     def load_negatives(self, path):
         negatives = pd.read_csv(path, sep=',', header=0)
-        negativeList = negatives.values.tolist()
-        return negativeList
+        negatives['neg_list'] = negatives.iloc[:, 1].apply(eval)
+        return negatives[['uid', 'neg_list']]
 
     # def load_genre(self, path):
     #     genre = pd.read_csv(path, header=0, names=['itemId', 'genre'])
