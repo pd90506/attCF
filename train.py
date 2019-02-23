@@ -83,7 +83,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy',
+    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', 'categorical_crossentropy'],
                   loss_weights=args.loss_weights)
 
     # Init performance
@@ -132,5 +132,5 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [0.99, 0.01]
+    args1.loss_weights = [0.95, 0.05]
     fit(args1)
