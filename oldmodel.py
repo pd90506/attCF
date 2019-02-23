@@ -119,21 +119,20 @@ def load_pretrain_model(model, gmf_model, mlp_model, num_layers):
 
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [],[],[]
-    num_items = len(train['mid'].unique())
-    for _, row in train.iterrows():
+    num_users = train.shape[0]
+    num_items = 3960  ## TODO!
+    for (u, i) in train.keys():
         # positive instance
-        u = row['uid']
-        i = row['mid']
-        user_input.append(int(u))
-        item_input.append(int(i))
+        user_input.append(u)
+        item_input.append(i)
         labels.append(1)
         # negative instances
         for t in range(num_negatives):
             j = np.random.randint(num_items)
-            # while ((u,j) in train.keys()):
-            #     j = np.random.randint(num_items)
-            user_input.append(int(u))
-            item_input.append(int(j))
+            while ((u,j) in train.keys()):
+                j = np.random.randint(num_items)
+            user_input.append(u)
+            item_input.append(j)
             labels.append(0)
     return user_input, item_input, labels
 
@@ -213,12 +212,12 @@ def fit():
     loss = 1.0 ## TODO
     output.loc[0] = [hr, ndcg, loss]
     
-    # Generate training instances
-    user_input, item_input, labels = get_train_instances(train, num_negatives)
 
     # Training model
     for epoch in range(int(num_epochs)):
         t1 = time()
+        # Generate training instances
+        user_input, item_input, labels = get_train_instances(train, num_negatives)
         
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input

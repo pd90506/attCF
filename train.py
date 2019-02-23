@@ -3,7 +3,7 @@ import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
 from time import time
-from olddatasetclass_1 import Dataset
+from olddatasetclass import Dataset
 from evaluate_legacy_1 import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
@@ -18,33 +18,32 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 16
+        self.e_dim = 8
         self.f_dim = 8
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [0.9, 0.1]
+        self.loss_weights = [1, 0]
         self.K = 10
         # self.learner = 'adam' 
 
 
 def get_train_instances(train, num_negatives):
-    user_input, item_input, labels = [], [], []
-    num_items = len(train['mid'].unique())
-    for _, row in train.iterrows():
+    user_input, item_input, labels = [],[],[]
+    num_users = train.shape[0]
+    num_items = 3952  ## TODO!
+    for (u, i) in train.keys():
         # positive instance
-        u = row['uid']
-        i = row['mid']
-        user_input.append(int(u))
-        item_input.append(int(i))
+        user_input.append(u)
+        item_input.append(i)
         labels.append(1)
         # negative instances
         for t in range(num_negatives):
             j = np.random.randint(num_items)
-            # while ((u,j) in train.keys()):
-            #     j = np.random.randint(num_items)
-            user_input.append(int(u))
-            item_input.append(int(j))
+            while ((u,j) in train.keys()):
+                j = np.random.randint(num_items)
+            user_input.append(u)
+            item_input.append(j)
             labels.append(0)
     return user_input, item_input, labels
 
@@ -94,7 +93,7 @@ def fit(args=Args()):
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
 
-    # dummy_genre = np.random.randn(4970845, args.num_tasks)
+    #dummy_genre = np.random.randn(4970845, args.num_tasks)
 
     # save Hit ratio and ndcg, loss
     output = pd.DataFrame(columns=['hr', 'ndcg', 'loss'])
@@ -106,7 +105,8 @@ def fit(args=Args()):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, args.num_neg)
-        dummy_genre = item_to_genre(item_input, data_size=args.dataset)
+        dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
+        dummy_genre = np.nan_to_num(dummy_genre)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels), dummy_genre], # labels 
@@ -132,5 +132,5 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [0.95, 0.05]
+    args1.loss_weights = [0.99, 0.01]
     fit(args1)
