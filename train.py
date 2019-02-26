@@ -14,7 +14,7 @@ class Args(object):
     """Used to generate different sets of arguments"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-1m'
+        self.dataset = 'ml-100k'
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
@@ -31,7 +31,7 @@ class Args(object):
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [],[],[]
     num_users = train.shape[0]
-    num_items = 3952  ## TODO!
+    num_items = 1682 # 3952  ## TODO!
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)
@@ -131,6 +131,6 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
-    args1.dataset = 'ml-1m'
-    args1.loss_weights = [0.95, 0.05]
+    args1.dataset = 'ml-100k'
+    args1.loss_weights = [1, 0.001]
     fit(args1)
