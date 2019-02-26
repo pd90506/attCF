@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense, Lambda, Activation
 from tensorflow.keras.layers import Embedding, Input, Dense, Multiply, Reshape, Flatten, Concatenate
 from tensorflow.keras.optimizers import Adagrad, Adam, SGD, RMSprop
 from tensorflow.keras.regularizers import l2
-from evaluate_legacy import evaluate_model
+from evaluate import evaluate_model
 from olddatasetclass import Dataset
 from time import time
 import multiprocessing as mp
@@ -200,7 +200,7 @@ def fit():
         print("Load pretrained GMF (%s) and MLP (%s) models done. " %(mf_pretrain, mlp_pretrain))
         
     # Init performance
-    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK, evaluation_threads)
+    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
     hr, ndcg = np.array(hits).mean(), np.array(ndcgs).mean()
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
@@ -227,7 +227,7 @@ def fit():
         
         # Evaluation
         if epoch %1 == 0:
-            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK, evaluation_threads)
+            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
             hr, ndcg, loss = np.array(hits).mean(), np.array(ndcgs).mean(), hist.history['loss'][0]
             print('Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
