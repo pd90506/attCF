@@ -80,6 +80,8 @@ def convert_100k(source_dir, target_dir):
     data = pd.read_csv(source_data, sep='\t', names=col_names)
     data['uid'] = data['uid'].apply(lambda x: x - 1)
     data['mid'] = data['mid'].apply(lambda x: x - 1)
+    data = data.sort_values(by=['uid'], axis=0).reset_index(drop=True)
+
     data.to_csv(target_data, index=False)
 
     # from source movie to target movie
@@ -122,13 +124,14 @@ def convert_1m(source_dir, target_dir):
     movies['genre_list'] = movies['genre'].apply(genre_to_int_list)
     new_df = movies['genre'].apply(genre_to_int_list)
     a = new_df.apply(lambda x: pd.Series(x))
-    a['mid'] = a.index
+    a['mid'] = movies['mid'].apply(lambda x: x - 1)
     col_names = ['Action', 'Adventure',
                  'Animation', 'Children', 'Comedy', 'Crime',
                  'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
                  'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi',
                  'Thriller', 'War', 'Western', 'mid']
     a.columns = col_names
+    
     a = a[['mid', 'Action', 'Adventure',
            'Animation', 'Children', 'Comedy', 'Crime',
            'Documentary', 'Drama', 'Fantasy', 'Film-Noir',
@@ -194,7 +197,7 @@ def sample_ml(data_size='ml-100k', target_dir='Data'):
     # define the file names of train, test and negatives
     train_file = target_dir + '/' + data_size + '.train.rating'
     test_file = target_dir + '/' + data_size + '.test.rating'
-    test_negatives = target_dir + '/' + data_size + '.test.negatives'
+    test_negatives = target_dir + '/' + data_size + '.test.negative'
     # load the source data file
     source_dir = 'movielens/' + data_size + '.ratings'
     ratings = pd.read_csv(source_dir, header=0)

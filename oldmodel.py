@@ -10,7 +10,7 @@ from tensorflow.keras.layers import Dense, Lambda, Activation
 from tensorflow.keras.layers import Embedding, Input, Dense, Multiply, Reshape, Flatten, Concatenate
 from tensorflow.keras.optimizers import Adagrad, Adam, SGD, RMSprop
 from tensorflow.keras.regularizers import l2
-from evaluate_legacy import evaluate_model
+from evaluate import evaluate_model
 from olddatasetclass import Dataset
 from time import time
 import multiprocessing as mp
@@ -23,7 +23,7 @@ class Args(object):
     def __init__(self):
         self.path = 'Data/'
         self.dataset = 'ml-1m'
-        self.epochs = 20
+        self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8
         self.layers = '[64,32,16,8]'
@@ -34,6 +34,7 @@ class Args(object):
         self.learner = 'adam'
         self.verbose = 0
         self.out = 1
+        self.K = 10
         self.mf_pretrain = ''
         self.mlp_pretrain= ''
 
@@ -118,21 +119,21 @@ def load_pretrain_model(model, gmf_model, mlp_model, num_layers):
 
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [],[],[]
-    num_items = len(train['mid'].unique())
-    for _, row in train.iterrows():
+    num_users = train.shape[0]
+    # num_items = 1682 # 3960  ## TODO!
+    num_items = 3960  ## TODO!
+    for (u, i) in train.keys():
         # positive instance
-        u = row['uid']
-        i = row['mid']
-        user_input.append(int(u))
-        item_input.append(int(i))
+        user_input.append(u)
+        item_input.append(i)
         labels.append(1)
         # negative instances
         for t in range(num_negatives):
             j = np.random.randint(num_items)
-            # while ((u,j) in train.keys()):
-            #     j = np.random.randint(num_items)
-            user_input.append(int(u))
-            item_input.append(int(j))
+            while ((u,j) in train.keys()):
+                j = np.random.randint(num_items)
+            user_input.append(u)
+            item_input.append(j)
             labels.append(0)
     return user_input, item_input, labels
 
@@ -156,17 +157,17 @@ def fit():
     # args.dataset = name_data
     # args.batch_size = batch_size
             
-    topK = 10
+    topK = args.K
     evaluation_threads = 1#mp.cpu_count()
     print("NeuMF arguments: %s " %(args))
     model_out_file = 'Pretrain/%s_NeuMF_%d_%s_%d.h5' %(args.dataset, mf_dim, args.layers, time())
-    result_out_file = 'outputs/%s_NeuMF_%d_%s_%d.csv' %(args.dataset, mf_dim, args.layers, time())
+    result_out_file = 'outputs/%s_NeuMF_%d_%s_top%d_%d.csv' %(args.dataset, mf_dim, args.layers, args.K, time())
 
      # Loading data
     t1 = time()
     if args.dataset=='ml-1m':
         num_users = 6040
-        num_items = 3706 # need modification
+        num_items = 3960 # need modification
     elif args.dataset=='ml-100k':
         num_users = 943
         num_items = 1682
@@ -200,7 +201,7 @@ def fit():
         print("Load pretrained GMF (%s) and MLP (%s) models done. " %(mf_pretrain, mlp_pretrain))
         
     # Init performance
-    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK, evaluation_threads)
+    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
     hr, ndcg = np.array(hits).mean(), np.array(ndcgs).mean()
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
@@ -208,16 +209,17 @@ def fit():
         model.save_weights(model_out_file, overwrite=True) 
 
     # save Hit ratio and ndcg, loss
-    output = pd.DataFrame(columns=['hr', 'ndcg'])
-    output.loc[0] = [hr, ndcg]
+    output = pd.DataFrame(columns=['hr', 'ndcg', 'loss'])
+    loss = 1.0 ## TODO
+    output.loc[0] = [hr, ndcg, loss]
     
-
 
     # Training model
     for epoch in range(int(num_epochs)):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, num_negatives)
+        
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          np.array(labels), # labels 
@@ -226,11 +228,11 @@ def fit():
         
         # Evaluation
         if epoch %1 == 0:
-            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK, evaluation_threads)
+            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
             hr, ndcg, loss = np.array(hits).mean(), np.array(ndcgs).mean(), hist.history['loss'][0]
             print('Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
-            output.loc[epoch+1] = [hr, ndcg]
+            output.loc[epoch+1] = [hr, ndcg, loss]
             if hr > best_hr:
                 best_hr, best_ndcg, best_iter = hr, ndcg, epoch
                 if args.out > 0:
@@ -240,7 +242,7 @@ def fit():
     if args.out > 0:
         print("The best NeuMF model is saved to %s" %(model_out_file))
 
-    output.to_csv(result_out_file)
+    output.to_csv(result_out_file, index=False)
     return([best_iter, best_hr, best_ndcg])
 
 

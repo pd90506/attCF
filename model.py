@@ -89,10 +89,13 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     weighted_sum = keras.layers.Dot(axes=-1)(
         [att_weight_vector, item_feature_tensor])
 
+    weighted_sum = keras.layers.Flatten()(weighted_sum)
+    final_layer = keras.layers.Concatenate()([user_feature, weighted_sum])
+
     # Final layer with sigmoid activation
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',
-                                    name='prediction')(weighted_sum)
+                                    name='prediction')(final_layer)
 
     # Construct model
     model = keras.models.Model(inputs=[user_input, item_input],
