@@ -4,7 +4,7 @@ from tensorflow.keras import backend as K
 import numpy as np
 from time import time
 from olddatasetclass import Dataset
-from evaluate_legacy_1 import evaluate_model
+from evaluate import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
 import pandas as pd
@@ -13,6 +13,7 @@ import pandas as pd
 class Args(object):
     """Used to generate different sets of arguments"""
     def __init__(self):
+        # default vaules
         self.path = 'Data/'
         self.dataset = 'ml-100k'
         self.epochs = 50
@@ -51,7 +52,8 @@ def get_train_instances(train, num_negatives):
 
 def fit(args=Args()):
     # args = Args()
-    result_out_file = 'outputs/%s_attcf_%s_top%d_%d.csv' %(args.dataset, args.loss_weights, args.K,time())
+    result_out_file = 'outputs/%s_attcf_%s_top%d_edim%d_fdim%d_%d.csv' %(args.dataset,
+                                                                         args.loss_weights, args.e_dim, args.f_dim, args.K,time())
     topK = args.K
     evaluation_threads = 1  # mp.cpu_count()
     print("Att-Mul-MF arguments: %s " % (args))
@@ -88,8 +90,7 @@ def fit(args=Args()):
                   loss_weights=args.loss_weights)
 
     # Init performance
-    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK,
-                                   evaluation_threads)
+    (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
     hr, ndcg = np.array(hits).mean(), np.array(ndcgs).mean()
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
@@ -117,7 +118,7 @@ def fit(args=Args()):
         
         # Evaluation
         if epoch %1 == 0:
-            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK, evaluation_threads)
+            (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
             hr, ndcg, loss = np.array(hits).mean(), np.array(ndcgs).mean(), hist.history['loss'][0]
             print('Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
