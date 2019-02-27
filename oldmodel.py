@@ -22,7 +22,7 @@ class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.dataset = 'ml-1m'
         self.epochs = 50
         self.batch_size = 256
         self.num_factors = 8
@@ -120,7 +120,8 @@ def load_pretrain_model(model, gmf_model, mlp_model, num_layers):
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [],[],[]
     num_users = train.shape[0]
-    num_items = 1682 # 3960  ## TODO!
+    # num_items = 1682 # 3960  ## TODO!
+    num_items = 3960  ## TODO!
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)

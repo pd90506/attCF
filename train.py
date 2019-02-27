@@ -31,7 +31,8 @@ class Args(object):
 def get_train_instances(train, num_negatives):
     user_input, item_input, labels = [],[],[]
     num_users = train.shape[0]
-    num_items = 1682 # 3952  ## TODO!
+    # num_items = 1682 # 3952  ## TODO!
+    num_items = 3952
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)
@@ -131,6 +132,6 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
-    args1.dataset = 'ml-100k'
-    args1.loss_weights = [1, 0.001]
+    args1.dataset = 'ml-1m'
+    args1.loss_weights = [1, 0.01]
     fit(args1)
