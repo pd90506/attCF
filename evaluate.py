@@ -29,7 +29,7 @@ def evaluate_model(model, testRatings, testNegatives, K):
     # the first column is the prediction of test sample, others are
     # of the negative samples
     predictions = model.predict([userSamples, testSamples], batch_size=256)
-    if len(predictions.shape) > 2:
+    if isinstance(predictions, list):
         predictions = predictions[0]
     predictions = predictions.reshape(shape)
 
