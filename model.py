@@ -33,6 +33,9 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
+    layers = [64, 32, 16, 8] # dummy layers
+    num_layer = len(layers)
+
     user_embedding = keras.layers.Embedding(
         input_dim=num_users, output_dim=e_dim, name='user_embedding',
         embeddings_initializer=init_normal(),
@@ -45,17 +48,40 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
+    mlp_user_embedding = keras.layers.Embedding(
+        input_dim=num_users, output_dim=int(layers[0]/2),
+        name='mlp_user_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)
+
+    mlp_item_embedding = keras.layers.Embedding(
+        input_dim=num_items, output_dim=int(layers[0]/2),
+        name='mlp_item_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)   
+
     # Flatten the output tensor
     user_latent = keras.layers.Flatten()(user_embedding(user_input))
     item_latent = keras.layers.Flatten()(item_embedding(item_input))
+    mlp_user_latent = keras.layers.Flatten()(mlp_user_embedding(user_input))
+    mlp_item_latent = keras.layers.Flatten()(mlp_item_embedding(item_input))
 
     # Element-wise product
     mf_vector = keras.layers.Multiply()([user_latent, item_latent])
 
     # User feature and item multitask feature
-    user_feature = keras.layers.Dense(
-        units=f_dim, kernel_regularizer=keras.regularizers.l2(reg),
-        activation='relu', name='user_feature')(user_latent)
+    # user_feature = keras.layers.Dense(
+    #     units=f_dim, kernel_regularizer=keras.regularizers.l2(reg),
+    #     activation='relu', name='user_feature')(user_latent)
+
+    # concatenate user latent and item latent, prepare for mlp part
+    mlp_vector = keras.layers.Concatenate()([mlp_user_latent, mlp_item_latent])
+
+    for idx in range(1, num_layer):
+        layer = keras.layers.Dense(layers[idx], kernel_regularizer= keras.regularizers.l2(reg), activation='relu', name="layer%d" %idx)
+        mlp_vector = layer(mlp_vector)
     # Create *num_tasks* parallel layers for all genres
     item_feature_list = []
     # Define the multitask output for auxiliary supervision
@@ -73,7 +99,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         item_output_list.append(item_output)
         # Produce attention weights vector via inner products between
         # user feature vector and item feature vectors
-        att_weight = keras.layers.Dot(axes=-1)([user_feature, item_feature])
+        att_weight = keras.layers.Dot(axes=-1)([mlp_vector, item_feature])
         att_weight_list.append(att_weight)
 
     # Convert lists to vectors
@@ -90,7 +116,8 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         [att_weight_vector, item_feature_tensor])
 
     weighted_sum = keras.layers.Flatten()(weighted_sum)
-    final_layer = keras.layers.Concatenate()([user_feature, weighted_sum])
+    # concatenate mlp part and weighted sum
+    final_layer = keras.layers.Concatenate()([mlp_vector, weighted_sum])
 
     # Final layer with sigmoid activation
     prediction = keras.layers.Dense(1, activation='sigmoid',
