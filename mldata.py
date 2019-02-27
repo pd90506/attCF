@@ -80,6 +80,8 @@ def convert_100k(source_dir, target_dir):
     data = pd.read_csv(source_data, sep='\t', names=col_names)
     data['uid'] = data['uid'].apply(lambda x: x - 1)
     data['mid'] = data['mid'].apply(lambda x: x - 1)
+    data = data.sort_values(by=['uid'], axis=0).reset_index(drop=True)
+
     data.to_csv(target_data, index=False)
 
     # from source movie to target movie
