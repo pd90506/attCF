@@ -134,5 +134,5 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [1, 0.01]
+    args1.loss_weights = [1, 0.05]
     fit(args1)
