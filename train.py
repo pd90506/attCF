@@ -15,7 +15,7 @@ class Args(object):
     def __init__(self):
         # default vaules
         self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.dataset = 'ml-1m'
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
@@ -24,7 +24,7 @@ class Args(object):
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0]
+        self.loss_weights = [1, 0.01]
         self.K = 10
         # self.learner = 'adam' 
 
@@ -134,5 +134,5 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [1, 0.05]
+    args1.loss_weights = [1, 0]
     fit(args1)
