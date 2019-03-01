@@ -53,7 +53,7 @@ def get_train_instances(train, num_negatives):
 def fit(args=Args()):
     # args = Args()
     result_out_file = 'outputs/%s_attcf_%s_top%d_edim%d_fdim%d_%d.csv' %(args.dataset,
-                                                                         args.loss_weights, args.e_dim, args.f_dim, args.K,time())
+                                                                         args.loss_weights, args.K, args.e_dim, args.f_dim,time())
     topK = args.K
     evaluation_threads = 1  # mp.cpu_count()
     print("Att-Mul-MF arguments: %s " % (args))
@@ -86,7 +86,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', 'categorical_crossentropy'],
+    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', 'binary_crossentropy'],
                   loss_weights=args.loss_weights)
 
     # Init performance
@@ -132,7 +132,14 @@ def fit(args=Args()):
 
 
 if __name__ == '__main__':
-    args1 = Args()
-    args1.dataset = 'ml-1m'
-    args1.loss_weights = [1, 0.05]
-    fit(args1)
+    # args1 = Args()
+    # args1.dataset = 'ml-1m'
+    # args1.loss_weights = [1, 0.1]
+    # fit(args1)
+    beta = np.linspace(0, 1, 11)
+    for b in beta:
+        args = Args()
+        args.dataset = 'ml-1m'
+        args.loss_weights = [1, b]
+        fit(args)
+    
