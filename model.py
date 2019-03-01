@@ -58,8 +58,6 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         input_length=1)
 
     # Flatten the output tensor
-    # user_latent = keras.layers.Flatten()(user_embedding(user_input))
-    # item_latent = keras.layers.Flatten()(item_embedding(item_input))
     mlp_user_latent = keras.layers.Flatten()(mlp_user_embedding(user_input))
     mlp_item_latent = keras.layers.Flatten()(mlp_item_embedding(item_input))
 
@@ -73,21 +71,21 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
             activation='relu', name="mlp_layer%d" % idx)
         mlp_vector = layer(mlp_vector)
 
-    item_vector = keras.layers.Dense(
-        units=item_layers[1]*num_tasks,
-        activation='relu',
-        kernel_initializer='lecun_uniform',
-        name='item_vector')(mlp_item_latent)
-    item_vector = keras.layers.Reshape((num_tasks, item_layers[1]))(
-        item_vector)
-
-    # item vector feature extraction
-    for idx in range(2, num_item_layer):
+    # item vector feature extraction, split at the last layer
+    for idx in range(1, num_item_layer-1):
         layer = keras.layers.Dense(
             item_layers[idx],
             kernel_regularizer=keras.regularizers.l2(reg),
             activation='relu', name="item_layer%d" % idx)
-        item_vector = layer(item_vector)
+        mlp_item_latent = layer(mlp_item_latent)
+
+    item_vector = keras.layers.Dense(
+        units=num_tasks*item_layers[-1],
+        activation='relu',
+        kernel_initializer='lecun_uniform',
+        name='item_vector')(mlp_item_latent)
+    item_vector = keras.layers.Reshape((num_tasks, item_layers[-1]))(
+        item_vector)
 
     weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
         [item_vector, mlp_vector])

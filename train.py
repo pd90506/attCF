@@ -8,6 +8,7 @@ from evaluate import evaluate_model
 from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
 import pandas as pd
+from aux_loss import aux_crossentropy_loss
 
 
 class Args(object):
@@ -86,7 +87,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', 'binary_crossentropy'],
+    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', aux_crossentropy_loss],
                   loss_weights=args.loss_weights)
 
     # Init performance
@@ -132,14 +133,14 @@ def fit(args=Args()):
 
 
 if __name__ == '__main__':
-    # args1 = Args()
-    # args1.dataset = 'ml-1m'
-    # args1.loss_weights = [1, 0.1]
-    # fit(args1)
-    beta = np.linspace(0, 1, 11)
-    for b in beta:
-        args = Args()
-        args.dataset = 'ml-1m'
-        args.loss_weights = [1, b]
-        fit(args)
+    args1 = Args()
+    args1.dataset = 'ml-1m'
+    args1.loss_weights = [1, 0.3]
+    fit(args1)
+    # beta = np.linspace(0, 1, 11)
+    # for b in beta:
+    #     args = Args()
+    #     args.dataset = 'ml-1m'
+    #     args.loss_weights = [1, b]
+    #     fit(args)
     
