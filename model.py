@@ -32,7 +32,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
-    layers = [64, 32, 16, 8] # dummy layers
+    layers = [64, 32, 16, 8]  # dummy layers
     num_layer = len(layers)
 
     user_embedding = keras.layers.Embedding(
@@ -59,7 +59,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         name='mlp_item_embedding',
         embeddings_initializer=init_normal(),
         embeddings_regularizer=keras.regularizers.l2(reg),
-        input_length=1)   
+        input_length=1)
 
     # Flatten the output tensor
     user_latent = keras.layers.Flatten()(user_embedding(user_input))
@@ -71,12 +71,12 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     mlp_vector = keras.layers.Concatenate()([mlp_user_latent, mlp_item_latent])
 
     for idx in range(1, num_layer):
-        layer = keras.layers.Dense(layers[idx],
-                                   kernel_regularizer=keras.regularizers.l2(reg),
-                                   activation='relu', name="mlp_layer%d" %idx)
+        layer = keras.layers.Dense(
+            layers[idx],
+            kernel_regularizer=keras.regularizers.l2(reg),
+            activation='relu', name="mlp_layer%d" % idx)
         mlp_vector = layer(mlp_vector)
-        
-        
+
     # Element-wise product
     mf_vector = keras.layers.Multiply()([user_latent, item_latent])
     mf_vector = keras.layers.Dense(units=f_dim*num_tasks,
@@ -84,22 +84,22 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                    kernel_initializer='lecun_uniform',
                                    name='mf_vector')(mf_vector)
     mf_vector = keras.layers.Reshape((num_tasks, f_dim))(mf_vector)
-    
-    weight_vector = keras.layers.Dot(axes=-1, normalize=True)([mf_vector, mlp_vector])
+
+    weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
+        [mf_vector, mlp_vector])
     att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, mf_vector])
-    
+
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',
-                                    name='prediction')(att_vector) 
-    
+                                    name='prediction')(att_vector)
+
     # Auxiliary info output
     aux_vector = keras.layers.Dense(units=1,
-                       activation='sigmoid',
-                       kernel_initializer='lecun_uniform',
-                       name='aux_vector')(mf_vector)
+                                    activation='sigmoid',
+                                    kernel_initializer='lecun_uniform',
+                                    name='aux_vector')(mf_vector)
     aux_vector = keras.layers.Reshape((num_tasks,))(aux_vector)
-        
-    model = keras.models.Model(inputs=[user_input, item_input],
-                               outputs=[prediction, aux_vector]) 
-    return model
 
+    model = keras.models.Model(inputs=[user_input, item_input],
+                               outputs=[prediction, aux_vector])
+    return model
