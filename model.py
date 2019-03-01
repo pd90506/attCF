@@ -88,10 +88,13 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
         [mf_vector, mlp_vector])
     att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, mf_vector])
+    
+    # Concatenate att_vector and mlp_vector
+    pred_vector = keras.layers.Concatenate()([mlp_vector, att_vector])
 
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',
-                                    name='prediction')(att_vector)
+                                    name='prediction')(pred_vector)
 
     # Auxiliary info output
     aux_vector = keras.layers.Dense(units=1,
