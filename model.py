@@ -32,38 +32,33 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
-    layers = [64, 32, 16, 8]  # dummy layers
-    num_layer = len(layers)
     item_layers = [64, 32, 16, 8]
     num_item_layer = len(item_layers)
 
-    mlp_user_embedding = keras.layers.Embedding(
-        input_dim=num_users, output_dim=int(layers[0]/2),
+    gmf_user_embedding = keras.layers.Embedding(
+        input_dim=num_users, output_dim=int(e_dim),
         name='mlp_user_embedding',
         embeddings_initializer=init_normal(),
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
-    mlp_item_embedding = keras.layers.Embedding(
-        input_dim=num_items, output_dim=int(layers[0]/2),
+    gmf_item_embedding = keras.layers.Embedding(
+        input_dim=num_items, output_dim=int(e_dim),
         name='mlp_item_embedding',
         embeddings_initializer=init_normal(),
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
     # Flatten the output tensor
-    mlp_user_latent = keras.layers.Flatten()(mlp_user_embedding(user_input))
-    mlp_item_latent = keras.layers.Flatten()(mlp_item_embedding(item_input))
+    gmf_user_latent = keras.layers.Flatten()(gmf_user_embedding(user_input))
+    gmf_item_latent = keras.layers.Flatten()(gmf_item_embedding(item_input))
 
-    # concatenate user latent and item latent, prepare for mlp part
-    mlp_vector = keras.layers.Concatenate()([mlp_user_latent, mlp_item_latent])
-
-    for idx in range(1, num_layer):
-        layer = keras.layers.Dense(
-            layers[idx],
-            kernel_regularizer=keras.regularizers.l2(reg),
-            activation='relu', name="mlp_layer%d" % idx)
-        mlp_vector = layer(mlp_vector)
+    # Element-wise product of user and item latent, gmf
+    gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
+    # To match the item feature dimension
+    gmf_vector = keras.layers.Dense(f_dim,
+                                    kernel_regularizer=keras.regularizers.l2(reg),
+                                    activation='relu', name='gmf_vector')(gmf_vector)
 
     # item vector feature extraction, split at the last layer
     for idx in range(1, num_item_layer-1):
@@ -71,22 +66,22 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
             item_layers[idx],
             kernel_regularizer=keras.regularizers.l2(reg),
             activation='relu', name="item_layer%d" % idx)
-        mlp_item_latent = layer(mlp_item_latent)
+        gmf_item_latent = layer(gmf_item_latent)
 
     item_vector = keras.layers.Dense(
         units=num_tasks*item_layers[-1],
         activation='relu',
         kernel_initializer='lecun_uniform',
-        name='item_vector')(mlp_item_latent)
+        name='item_vector')(gmf_item_latent)
     item_vector = keras.layers.Reshape((num_tasks, item_layers[-1]))(
         item_vector)
 
     weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
-        [item_vector, mlp_vector])
+        [item_vector, gmf_vector])
     att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, item_vector])
 
     # Concatenate att_vector and mlp_vector
-    pred_vector = keras.layers.Concatenate()([mlp_vector, att_vector])
+    pred_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
 
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',

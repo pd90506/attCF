@@ -20,12 +20,12 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 8
+        self.e_dim = 32
         self.f_dim = 8
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.01]
+        self.loss_weights = [1, 0]
         self.K = 10
         # self.learner = 'adam' 
 
@@ -143,7 +143,6 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
-    args1.loss_weights = [1, 0]
     fit(args1)
     # beta = np.linspace(0, 1, 11)
     # for b in beta:
