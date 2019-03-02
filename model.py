@@ -56,7 +56,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     # Element-wise product of user and item latent, gmf
     gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
     # To match the item feature dimension
-    gmf_vector = keras.layers.Dense(f_dim,
+    gmf_attention = keras.layers.Dense(f_dim,
                                     kernel_regularizer=keras.regularizers.l2(reg),
                                     activation='relu', name='gmf_vector')(gmf_vector)
 
@@ -77,10 +77,10 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         item_vector)
 
     weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
-        [item_vector, gmf_vector])
+        [item_vector, gmf_attention])
     att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, item_vector])
 
-    # Concatenate att_vector and mlp_vector
+    # Concatenate att_vector and gmf_vector
     pred_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
 
     prediction = keras.layers.Dense(1, activation='sigmoid',
