@@ -17,7 +17,7 @@ class Args(object):
         # default vaules
         self.path = 'Data/'
         self.dataset = 'ml-1m'
-        self.epochs = 50
+        self.epochs = 200
         self.batch_size = 256
         self.num_tasks = 18
         self.e_dim = 16
