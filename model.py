@@ -37,12 +37,6 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     item_layers = [64, 32, 16, 8]
     num_item_layer = len(item_layers)
 
-    # item_embedding = keras.layers.Embedding(
-    #     input_dim=num_items, output_dim=item_layers[0], name='item_embedding',
-    #     embeddings_initializer=init_normal(),
-    #     embeddings_regularizer=keras.regularizers.l2(reg),
-    #     input_length=1)
-
     mlp_user_embedding = keras.layers.Embedding(
         input_dim=num_users, output_dim=int(layers[0]/2),
         name='mlp_user_embedding',
@@ -107,4 +101,6 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
 
     model = keras.models.Model(inputs=[user_input, item_input],
                                outputs=[prediction, aux_vector])
-    return model
+    aux_model = keras.models.Model(inputs=[item_input],
+                                   outputs=[aux_vector])
+    return (model, aux_model)
