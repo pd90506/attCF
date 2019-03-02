@@ -69,15 +69,40 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
     amf_vector = keras.layers.Multiply()([amf_user_latent, amf_item_latent])
 
+
+    # attention parts
+
+    amf_vector = keras.layers.Dense(
+        units=num_tasks*e_dim,
+        activation='relu',
+        kernel_initializer='lecun_uniform',
+        name='item_vector')(amf_vector)
+    amf_vector = keras.layers.Reshape((num_tasks, e_dim))(
+        amf_vector)
+
+    weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
+        [amf_vector, gmf_vector])
+    att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, amf_vector])
+
+
     # Concatenate two vectors
-    predict_vector = keras.layers.Concatenate()([gmf_vector, amf_vector])
+    predict_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
 
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',
                                     name='prediction')(predict_vector)
 
-    model = keras.models.Model(inputs=[user_input, item_input],
-                               outputs=[prediction])
+    # Auxiliary info output
+    aux_vector = keras.layers.Dense(units=1,
+                                    activation='sigmoid',
+                                    kernel_initializer='lecun_uniform',
+                                    name='aux_vector')(amf_vector)
+    aux_vector = keras.layers.Reshape((num_tasks,))(aux_vector)
 
-    return model
+    model = keras.models.Model(inputs=[user_input, item_input],
+                               outputs=[prediction, aux_vector])
+
+    aux_model = keras.models.Model(inputs=[user_input, item_input],
+                                   outputs=[aux_vector])
+    return (model, aux_model)
     # return model

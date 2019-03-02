@@ -115,8 +115,8 @@ def fit(args=Args()):
 
         aux_item, aux_genre = get_genre(args.dataset)
          # Training
-        hist_aux = aux_model.fit([aux_item],  #input
-                                 [aux_genre],     #labels
+        hist_aux = aux_model.fit([np.array(user_input), np.array(item_input)],  #input
+                                 [dummy_genre],     #labels
                                  batch_size=args.batch_size, epochs=20,
                                  verbose=0, shuffle=True)
         hist = model.fit([np.array(user_input), np.array(item_input)], #input

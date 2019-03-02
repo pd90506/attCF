@@ -87,7 +87,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
+    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', aux_crossentropy_loss])
 
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
@@ -107,9 +107,11 @@ def fit(args=Args()):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, args.num_neg)
+        dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
+        dummy_genre = np.nan_to_num(dummy_genre)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
-                         [np.array(labels)], # labels 
+                         [np.array(labels), dummy_genre], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=0, shuffle=True)
         t2 = time()
 
@@ -132,6 +134,7 @@ def fit(args=Args()):
 if __name__ == '__main__':
     args1 = Args()
     args1.dataset = 'ml-1m'
+    args1.loss_weights = [1, 0.3]
     fit(args1)
     # beta = np.linspace(0, 1, 11)
     # for b in beta:
