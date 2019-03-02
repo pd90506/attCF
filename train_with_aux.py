@@ -20,8 +20,8 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 32
-        self.f_dim = 8
+        self.e_dim = 16
+        self.f_dim = 16
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
