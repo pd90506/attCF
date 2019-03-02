@@ -45,37 +45,39 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
+    amf_user_embedding = keras.layers.Embedding(
+        input_dim=num_users, output_dim=int(e_dim),
+        name='amf_user_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)
+
+    amf_item_embedding = keras.layers.Embedding(
+        input_dim=num_items, output_dim=int(e_dim),
+        name='amf_item_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)
+
     # Flatten the output tensor
     gmf_user_latent = keras.layers.Flatten()(gmf_user_embedding(user_input))
     gmf_item_latent = keras.layers.Flatten()(gmf_item_embedding(item_input))
+    amf_user_latent = keras.layers.Flatten()(amf_user_embedding(user_input))
+    amf_item_latent = keras.layers.Flatten()(amf_item_embedding(item_input))
 
     # Element-wise product of user and item latent, gmf
     gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
+    amf_vector = keras.layers.Multiply()([amf_user_latent, amf_item_latent])
 
-    # item vector feature extraction, split at the last layer
-
-    item_feature = keras.layers.Dense(
-        units=num_tasks*f_dim,
-        activation='relu',
-        kernel_initializer='lecun_uniform',
-        name='item_vector')(gmf_item_latent)
-    item_feature = keras.layers.Reshape((num_tasks, f_dim))(
-        item_feature)
+    # Concatenate two vectors
+    predict_vector = keras.layers.Concatenate()([gmf_vector, amf_vector])
 
     prediction = keras.layers.Dense(1, activation='sigmoid',
                                     kernel_initializer='lecun_uniform',
-                                    name='prediction')(gmf_vector)
-
-    # Auxiliary info output
-    aux_vector = keras.layers.Dense(units=1,
-                                    activation='sigmoid',
-                                    kernel_initializer='lecun_uniform',
-                                    name='aux_vector')(item_feature)
-    aux_vector = keras.layers.Reshape((num_tasks,))(aux_vector)
+                                    name='prediction')(predict_vector)
 
     model = keras.models.Model(inputs=[user_input, item_input],
-                               outputs=[prediction, aux_vector])
-    aux_model = keras.models.Model(inputs=[item_input],
-                                   outputs=[aux_vector])
-    return (model, aux_model)
+                               outputs=[prediction])
+
+    return model
     # return model

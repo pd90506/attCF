@@ -17,7 +17,7 @@ class Args(object):
         # default vaules
         self.path = 'Data/'
         self.dataset = 'ml-1m'
-        self.epochs = 200
+        self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
         self.e_dim = 16
@@ -53,7 +53,7 @@ def get_train_instances(train, num_negatives):
 
 def fit(args=Args()):
     # args = Args()
-    result_out_file = 'outputs/%s_attcf_%s_top%d_edim%d_fdim%d_%d.csv' %(args.dataset,
+    result_out_file = 'outputs/%s_attcf/noattention_%s_top%d_edim%d_fdim%d_%d.csv' %(args.dataset,
                                                                          args.loss_weights, args.K, args.e_dim, args.f_dim,time())
     topK = args.K
     evaluation_threads = 1  # mp.cpu_count()
