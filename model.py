@@ -32,7 +32,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
-    item_layers = [64, 32, 16, 8]
+    item_layers = [18, 12, 8]
     num_item_layer = len(item_layers)
 
     gmf_user_embedding = keras.layers.Embedding(
@@ -56,14 +56,17 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     # Element-wise product of user and item latent, gmf
     gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
     # To match the item feature dimension
-    gmf_attention = keras.layers.Dense(f_dim,
-                                    kernel_regularizer=keras.regularizers.l2(reg),
-                                    activation='relu', name='gmf_vector')(gmf_vector)
+    gmf_attention = keras.layers.Dense(
+        units=f_dim,
+        kernel_initializer=init_normal(),
+        kernel_regularizer=keras.regularizers.l2(reg),
+        activation='relu', name='gmf_vector')(gmf_vector)
 
     # item vector feature extraction, split at the last layer
-    for idx in range(1, num_item_layer-1):
+    for idx in range(0, num_item_layer-1):
         layer = keras.layers.Dense(
             item_layers[idx],
+            kernel_initializer=init_normal(),
             kernel_regularizer=keras.regularizers.l2(reg),
             activation='relu', name="item_layer%d" % idx)
         gmf_item_latent = layer(gmf_item_latent)
@@ -72,6 +75,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         units=num_tasks*item_layers[-1],
         activation='relu',
         kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
         name='item_vector')(gmf_item_latent)
     item_vector = keras.layers.Reshape((num_tasks, item_layers[-1]))(
         item_vector)
@@ -83,16 +87,21 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     # Concatenate att_vector and gmf_vector
     pred_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
 
-    prediction = keras.layers.Dense(1, activation='sigmoid',
-                                    kernel_initializer='lecun_uniform',
-                                    name='prediction')(pred_vector)
+    prediction = keras.layers.Dense(
+        units=1, activation='sigmoid',
+        kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
+        name='prediction')(pred_vector)
 
     # Auxiliary info output
-    aux_vector = keras.layers.Dense(units=1,
-                                    activation='sigmoid',
-                                    kernel_initializer='lecun_uniform',
-                                    name='aux_vector')(item_vector)
-    aux_vector = keras.layers.Reshape((num_tasks,))(aux_vector)
+    aux_vector = keras.layers.Dense(
+        units=1,
+        activation='sigmoid',
+        kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
+        name='aux_vector')(item_vector)
+    aux_vector = keras.layers.Reshape(
+        (num_tasks,), name='aux_output')(aux_vector)
 
     model = keras.models.Model(inputs=[user_input, item_input],
                                outputs=[prediction, aux_vector])

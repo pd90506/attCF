@@ -20,21 +20,21 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 8
+        self.e_dim = 24
         self.f_dim = 8
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.01]
+        self.loss_weights = [1, 0.02]
         self.K = 10
         # self.learner = 'adam' 
 
 
-def get_train_instances(train, num_negatives):
+def get_train_instances(train, num_negatives, num_items):
     user_input, item_input, labels = [],[],[]
-    num_users = train.shape[0]
+    # num_users = train.shape[0]
     # num_items = 1682 # 3952  ## TODO!
-    num_items = 3952
+    # num_items = num_items
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)
@@ -80,7 +80,7 @@ def fit(args=Args()):
              testRatings.shape[0]))
 
     # Build model
-    model = get_model(num_users,
+    model, _ = get_model(num_users,
                       num_items,
                       num_tasks=args.num_tasks,
                       e_dim=args.e_dim,
@@ -107,13 +107,13 @@ def fit(args=Args()):
     for epoch in range(int(args.epochs)):
         t1 = time()
         # Generate training instances
-        user_input, item_input, labels = get_train_instances(train, args.num_neg)
+        user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items)
         dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
         dummy_genre = np.nan_to_num(dummy_genre)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels), dummy_genre], # labels 
-                         batch_size=args.batch_size, epochs=1, verbose=0, shuffle=True)
+                         batch_size=args.batch_size, epochs=1, verbose=1, shuffle=True)
         t2 = time()
 
         
@@ -134,12 +134,10 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
-    args1.dataset = 'ml-1m'
-    args1.loss_weights = [1, 0.3]
     fit(args1)
     # beta = np.linspace(0, 1, 11)
     # for b in beta:
-    #     args = Args()
+    #     args = Args()s
     #     args.dataset = 'ml-1m'
     #     args.loss_weights = [1, b]
     #     fit(args)
