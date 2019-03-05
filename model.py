@@ -107,4 +107,6 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                outputs=[prediction, aux_vector])
     aux_model = keras.models.Model(inputs=[item_input],
                                    outputs=[aux_vector])
-    return (model, aux_model)
+    att_model = keras.models.Model(inputs=[user_input, item_input],
+                                   outputs=[weight_vector])
+    return (model, aux_model, att_model)
