@@ -20,12 +20,12 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 24
+        self.e_dim = 32
         self.f_dim = 8
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0]
+        self.loss_weights = [1, 0.1]
         self.K = 10
         # self.learner = 'adam' 
 
@@ -87,7 +87,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
+    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy', loss_weights=args.loss_weights)
 
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
@@ -122,7 +122,7 @@ def fit(args=Args()):
             hr, ndcg, loss = np.array(hits).mean(), np.array(ndcgs).mean(), hist.history['loss'][0]
             print('Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
-            if ndcg > best_ndcg:
+            if hr > best_hr:
                 best_hr, best_ndcg, best_iter = hr, ndcg, epoch
             
             output.loc[epoch+1] = [hr, ndcg, loss]
