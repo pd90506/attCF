@@ -32,7 +32,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
-    item_layers = [18, 12, 8]
+    item_layers = [20, 18, 16]
     num_item_layer = len(item_layers)
 
     gmf_user_embedding = keras.layers.Embedding(
@@ -52,15 +52,17 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
     # Flatten the output tensor
     gmf_user_latent = keras.layers.Flatten()(gmf_user_embedding(user_input))
     gmf_item_latent = keras.layers.Flatten()(gmf_item_embedding(item_input))
+    # GMF vector is used to make prediction
+    gmf_vector = keras.layers.Multiply(name='gmf_layer')([gmf_user_latent, gmf_item_latent])
 
-    # Element-wise product of user and item latent, gmf
-    gmf_vector = keras.layers.Multiply()([gmf_user_latent, gmf_item_latent])
-    # To match the item feature dimension
-    gmf_attention = keras.layers.Dense(
-        units=f_dim,
-        kernel_initializer=init_normal(),
-        kernel_regularizer=keras.regularizers.l2(reg),
-        activation='relu', name='gmf_vector')(gmf_vector)
+    # user vector feature extraction, doesn't split
+    for idx in range(0, num_item_layer):
+        layer = keras.layers.Dense(
+            item_layers[idx],
+            kernel_initializer=init_normal(),
+            kernel_regularizer=keras.regularizers.l2(reg),
+            activation='relu', name="user_layer%d" % idx)
+        gmf_user_latent = layer(gmf_user_latent)
 
     # item vector feature extraction, split at the last layer
     for idx in range(0, num_item_layer-1):
@@ -77,14 +79,20 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         kernel_initializer='lecun_uniform',
         kernel_regularizer=keras.regularizers.l2(reg),
         name='item_vector')(gmf_item_latent)
-    item_vector = keras.layers.Reshape((num_tasks, item_layers[-1]))(
-        item_vector)
+    item_vector = keras.layers.Reshape(
+        (num_tasks, item_layers[-1]), name='multitask_vector')(item_vector)
 
+    # weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
+    #     [item_vector, gmf_item_latent])
+    # att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, item_vector])
+    m_gmf_vector = keras.layers.Multiply()([gmf_user_latent, item_vector])
     weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
-        [item_vector, gmf_attention])
-    att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, item_vector])
+        [m_gmf_vector, gmf_user_latent])
+    att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, m_gmf_vector])
+    att_vector = keras.layers.Reshape(
+        (item_layers[-1],), name='attention_layer')(att_vector)
 
-    # Concatenate att_vector and gmf_vector
+    # Concatenate att_vector and gmf_layer
     pred_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
 
     prediction = keras.layers.Dense(
@@ -92,21 +100,15 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         kernel_initializer='lecun_uniform',
         kernel_regularizer=keras.regularizers.l2(reg),
         name='prediction')(pred_vector)
-
-    # Auxiliary info output
+    
     aux_vector = keras.layers.Dense(
-        units=1,
-        activation='sigmoid',
+        units=1, activation='sigmoid',
         kernel_initializer='lecun_uniform',
         kernel_regularizer=keras.regularizers.l2(reg),
         name='aux_vector')(item_vector)
-    aux_vector = keras.layers.Reshape(
-        (num_tasks,), name='aux_output')(aux_vector)
+    aux_vector = keras.layers.Reshape((num_tasks,), name='aux_output')(aux_vector)
 
     model = keras.models.Model(inputs=[user_input, item_input],
                                outputs=[prediction, aux_vector])
-    aux_model = keras.models.Model(inputs=[item_input],
-                                   outputs=[aux_vector])
-    att_model = keras.models.Model(inputs=[user_input, item_input],
-                                   outputs=[weight_vector])
-    return (model, aux_model, att_model)
+
+    return model

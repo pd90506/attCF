@@ -25,7 +25,7 @@ class Args(object):
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.05]
+        self.loss_weights = [1, 0]
         self.K = 10
         # self.learner = 'adam' 
 
@@ -80,15 +80,14 @@ def fit(args=Args()):
              testRatings.shape[0]))
 
     # Build model, att model is a sub-routine, no need to train it
-    model, aux_model, att_model = get_model(num_users,
+    model = get_model(num_users,
                       num_items,
                       num_tasks=args.num_tasks,
                       e_dim=args.e_dim,
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', 'binary_crossentropy'],
-                  loss_weights=args.loss_weights)
+    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
 
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
@@ -128,13 +127,13 @@ def fit(args=Args()):
             
             output.loc[epoch+1] = [hr, ndcg, loss]
 
-            att_vector_of_0 = att_model.predict([np.array([0]), np.array([0])])
-            aux_vector_of_0 = aux_model.predict([np.array([0])])
-            print('The attention vector for user 0 on movie 0 is:\n {}'.format(att_vector_of_0))
-            print('The output aux vector for movie 0 is:\n {}'.format(aux_vector_of_0))
-            print('The true genre info for movie 0 is:\n {}'.format(item_to_genre(0).values))
-            if epoch %3 == 0:
-                input()
+            # att_vector_of_0 = att_model.predict([np.array([0]), np.array([0])])
+            # aux_vector_of_0 = aux_model.predict([np.array([0])])
+            # print('The attention vector for user 0 on movie 0 is:\n {}'.format(att_vector_of_0))
+            # print('The output aux vector for movie 0 is:\n {}'.format(aux_vector_of_0))
+            # print('The true genre info for movie 0 is:\n {}'.format(item_to_genre(0).values))
+            # if epoch %3 == 0:
+            #     input()
     
     output.to_csv(result_out_file, index=False)
     print("End. Best Iteration %d:  HR = %.4f, NDCG = %.4f. " %(best_iter, best_hr, best_ndcg))
