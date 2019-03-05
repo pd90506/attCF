@@ -32,7 +32,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
                                     name='item_input')
 
     # Embedding layer
-    item_layers = [20, 18, 16]
+    item_layers = [28, 22, 16]
     num_item_layer = len(item_layers)
 
     gmf_user_embedding = keras.layers.Embedding(
