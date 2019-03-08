@@ -107,3 +107,8 @@ venv.bak/
 temp/
 .vscode/settings.json
 .vscode/settings.json
+Data/
+ml-1m/
+ml-100k/
+movielens/
+netflix/

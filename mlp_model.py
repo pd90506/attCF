@@ -22,13 +22,13 @@ class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-1m'
-        self.epochs = 50
+        self.dataset = 'ml-100k'
+        self.epochs = 20
         self.batch_size = 256
         self.num_factors = 8
-        self.layers = '[64,32,16,8]'
+        self.layers = '[32, 16]'
         self.reg_mf = '[0,0]'
-        self.reg_layers = '[0,0,0,0]'
+        self.reg_layers = '[0,0]'
         self.num_neg = 4
         self.lr = 0.001
         self.learner = 'adam'
@@ -102,11 +102,9 @@ def load_pretrain_model(model, gmf_model, mlp_model, num_layers):
     model.get_layer('prediction').set_weights([0.5*new_weights, 0.5*new_b])    
     return model
 
-def get_train_instances(train, num_negatives):
+def get_train_instances(train, num_negatives, num_items):
     user_input, item_input, labels = [],[],[]
     num_users = train.shape[0]
-    # num_items = 1682 # 3960  ## TODO!
-    num_items = 3960  ## TODO!
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)
@@ -144,8 +142,8 @@ def fit():
             
     topK = args.K
     evaluation_threads = 1#mp.cpu_count()
-    print("NeuMF arguments: %s " %(args))
-    model_out_file = 'Pretrain/%s_NeuMF_%d_%s_%d.h5' %(args.dataset, mf_dim, args.layers, time())
+    print("MLP arguments: %s " %(args))
+    model_out_file = 'Pretrain/%s_MLP_%d_%s_%d.h5' %(args.dataset, mf_dim, args.layers, time())
     result_out_file = 'outputs/%s_MLP_%d_%s_top%d_%d.csv' %(args.dataset, mf_dim, args.layers, args.K, time())
 
      # Loading data
@@ -203,7 +201,7 @@ def fit():
     for epoch in range(int(num_epochs)):
         t1 = time()
         # Generate training instances
-        user_input, item_input, labels = get_train_instances(train, num_negatives)
+        user_input, item_input, labels = get_train_instances(train, num_negatives, num_items)
         
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
@@ -225,7 +223,7 @@ def fit():
     
     print("End. Best Iteration %d:  HR = %.4f, NDCG = %.4f. " %(best_iter, best_hr, best_ndcg))
     if args.out > 0:
-        print("The best NeuMF model is saved to %s" %(model_out_file))
+        print("The best MLP model is saved to %s" %(model_out_file))
 
     output.to_csv(result_out_file, index=False)
     return([best_iter, best_hr, best_ndcg])

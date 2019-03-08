@@ -16,25 +16,23 @@ class Args(object):
     def __init__(self):
         # default vaules
         self.path = 'Data/'
-        self.dataset = 'ml-1m'
+        self.dataset = 'ml-100k'
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 24
+        self.e_dim = 8
         self.f_dim = 8
-        self.reg = 0.000001
+        self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0]
+        self.loss_weights = [1, 0.05]
         self.K = 10
         # self.learner = 'adam' 
 
 
-def get_train_instances(train, num_negatives):
+def get_train_instances(train, num_negatives, num_items):
     user_input, item_input, labels = [],[],[]
     num_users = train.shape[0]
-    # num_items = 1682 # 3952  ## TODO!
-    num_items = 3952
     for (u, i) in train.keys():
         # positive instance
         user_input.append(u)
@@ -87,7 +85,7 @@ def fit(args=Args()):
                       f_dim=args.f_dim,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', aux_crossentropy_loss],
+    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy',
                   loss_weights=args.loss_weights)
     
     aux_model.compile(optimizer=Adam(lr=args.lr), loss=aux_crossentropy_loss, metrics=[aux_accuracy])
@@ -105,20 +103,22 @@ def fit(args=Args()):
     loss = 1.0 ## TODO
     output.loc[0] = [hr, ndcg, loss]
 
+    aux_item, aux_genre = get_genre(args.dataset)
+    # Training
+    hist_aux = aux_model.fit([aux_item],  #input
+                                [aux_genre],     #labels
+                                batch_size=args.batch_size, epochs=200,
+                                verbose=1, shuffle=True)
+
     # Training model
     for epoch in range(int(args.epochs)):
         t1 = time()
         # Generate training instances
-        user_input, item_input, labels = get_train_instances(train, args.num_neg)
+        user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items)
         dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
         dummy_genre = np.nan_to_num(dummy_genre)
 
-        aux_item, aux_genre = get_genre(args.dataset)
-         # Training
-        hist_aux = aux_model.fit([aux_item],  #input
-                                 [aux_genre],     #labels
-                                 batch_size=args.batch_size, epochs=20,
-                                 verbose=0, shuffle=True)
+
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels), dummy_genre], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=1, shuffle=True)
@@ -142,7 +142,6 @@ def fit(args=Args()):
 
 if __name__ == '__main__':
     args1 = Args()
-    args1.dataset = 'ml-1m'
     fit(args1)
     # beta = np.linspace(0, 1, 11)
     # for b in beta:
