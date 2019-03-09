@@ -1,5 +1,6 @@
 # from model import get_model
-from att_mlp_model import get_model
+# from att_mlp_model import get_model
+from att_gmf_model import get_model
 # from att_only import get_model
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
@@ -20,7 +21,7 @@ class Args(object):
         self.path = 'Data/'
         self.dataset = 'ml-1m'
         self.epochs = 50
-        self.batch_size = 1024
+        self.batch_size = 256
         self.num_tasks = 18
         self.e_dim = 8
         self.mlp_layer = [64, 32, 16, 8]
