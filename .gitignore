@@ -105,10 +105,9 @@ venv.bak/
 .DS_Store
 .vscode/
 temp/
-.vscode/settings.json
-.vscode/settings.json
 Data/
 ml-1m/
 ml-100k/
 movielens/
 netflix/
+CiaoDVD/

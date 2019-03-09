@@ -1,6 +1,6 @@
 # from model import get_model
-from att_mlp_model import get_model
-# from att_only import get_model
+# from att_mlp_model import get_model
+from mlp_model import get_model
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
@@ -20,7 +20,7 @@ class Args(object):
         self.path = 'Data/'
         self.dataset = 'ml-1m'
         self.epochs = 50
-        self.batch_size = 1024
+        self.batch_size = 256
         self.num_tasks = 18
         self.e_dim = 8
         self.mlp_layer = [64, 32, 16, 8]
@@ -55,7 +55,7 @@ def get_train_instances(train, num_negatives, num_items):
 
 def fit(args=Args()):
     # args = Args()
-    result_out_file = 'outputs/%s_att_mlp_%s_top%d_edim%d_layer%s_%d.csv' %(args.dataset,
+    result_out_file = 'outputs/%s_mlp_%s_top%d_edim%d_layer%s_%d.csv' %(args.dataset,
                                                                          args.loss_weights, args.K, args.e_dim,args.mlp_layer, time())
     topK = args.K
     evaluation_threads = 1  # mp.cpu_count()
@@ -92,7 +92,7 @@ def fit(args=Args()):
                       mlp_layer=args.mlp_layer,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy', loss_weights=args.loss_weights)
+    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
     print(model.summary())
 
     # Init performance
@@ -113,11 +113,9 @@ def fit(args=Args()):
         t1 = time()
         # Generate training instances
         user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items)
-        dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
-        dummy_genre = np.nan_to_num(dummy_genre)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
-                         [np.array(labels), dummy_genre], # labels 
+                         [np.array(labels)], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=1, shuffle=True)
         t2 = time()
 
