@@ -22,13 +22,13 @@ class Args(object):
     """A simulator of parser in jupyter notebook"""
     def __init__(self):
         self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.dataset = 'ml-1m'
         self.epochs = 20
         self.batch_size = 256
         self.num_factors = 8
-        self.layers = '[32, 16]'
+        self.layers = '[64, 32, 16, 8]'
         self.reg_mf = '[0,0]'
-        self.reg_layers = '[0,0]'
+        self.reg_layers = '[0,0,0,0]'
         self.num_neg = 4
         self.lr = 0.001
         self.learner = 'adam'

@@ -16,7 +16,7 @@ class Args(object):
     def __init__(self):
         # default vaules
         self.path = 'Data/'
-        self.dataset = 'ml-100k'
+        self.dataset = 'ml-1m'
         self.epochs = 20
         self.batch_size = 256
         self.num_tasks = 18
@@ -25,7 +25,7 @@ class Args(object):
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.1]
+        self.loss_weights = [1, 0.02]
         self.K = 10
         # self.learner = 'adam' 
 

@@ -85,7 +85,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, mlp_layer=[32], reg=0):
         units=num_tasks*mlp_layer[-1],
         activation='relu',
         kernel_initializer='lecun_uniform',
-        kernel_regularizer=keras.regularizers.l2(reg),
+        kernel_regularizer=keras.regularizers.l2(0.001),
         name='item_vector')(item_latent)
     item_vector = keras.layers.Reshape(
         (num_tasks, mlp_layer[-1]), name='multitask_item_vector')(item_vector)
@@ -108,7 +108,7 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, mlp_layer=[32], reg=0):
 
     #  Concatenate gmf_vector and att_vector
     pred_vector = keras.layers.Concatenate()([mlp_vector, att_vector])
-    pred_vector = keras.layers.Concatenate(name='gmf_mlp_concat')([gmf_vector, pred_vector])
+    # pred_vector = keras.layers.Concatenate(name='gmf_mlp_concat')([gmf_vector, pred_vector])
 
     prediction = keras.layers.Dense(
         units=1, activation='sigmoid',
