@@ -75,4 +75,5 @@ def gainFirstK(array, K=10):
 
 
 
+
     

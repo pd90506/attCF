@@ -12,6 +12,40 @@ from tensorflow.keras.optimizers import Adam
 from item_to_genre import item_to_genre
 import pandas as pd
 from aux_loss import aux_crossentropy_loss
+import tensorflow as tf
+
+
+def focal_loss(gamma=2., alpha=.25):
+    '''
+    Compatible with tensorflow backend
+    '''
+    def focal_loss_fixed(y_true, y_pred):
+        pt_1 = tf.where(tf.equal(y_true, 1), y_pred, tf.ones_like(y_pred))
+        pt_1 = tf.cast(pt_1, dtype='float32')
+        pt_0 = tf.where(tf.equal(y_true, 0), y_pred, tf.zeros_like(y_pred))
+        pt_0 = tf.cast(pt_0, dtype='float32')
+        return -K.sum(alpha * K.pow(1. - pt_1, gamma) * K.log(pt_1))-K.sum((1-alpha) * K.pow( pt_0, gamma) * K.log(1. - pt_0))
+    return focal_loss_fixed
+
+
+def nd_focal_loss(gamma=2, alpha=.25):
+    ''' n dimensional version'''
+    focal_loss_1d = focal_loss(gamma=gamma, alpha=alpha)
+
+    def nd_focal_loss_fixed(y_true, y_pred):
+        print(y_true.shape)
+        print(y_pred.shape)
+        # assert(y_true.shape == y_pred.shape)
+        dim = y_pred.shape[1]
+        loss = 0
+        for i in range(dim):
+            # y_p = tf.layers.Flatten()(y_pred[:,i])
+            # y_t = tf.layers.Flatten()(y_true[:,i])
+            print(y_pred[:, i].shape)
+            loss += focal_loss_1d(y_true[:, i], y_pred[:, i])
+        return loss
+    return nd_focal_loss_fixed
+
 
 
 class Args(object):
@@ -23,12 +57,12 @@ class Args(object):
         self.epochs = 50
         self.batch_size = 256
         self.num_tasks = 18
-        self.e_dim = 8
-        self.mlp_layer = [64, 32, 16, 8]
-        self.reg = 0
+        self.e_dim = 32
+        self.mlp_layer = [256, 128,  64, 32]
+        self.reg = [0, 0.0001, 0.0001]
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.1]
+        self.loss_weights = [0.5, 0.5]
         self.K = 10
         # self.learner = 'adam' 
 
@@ -93,7 +127,7 @@ def fit(args=Args()):
                       mlp_layer=args.mlp_layer,
                       reg=args.reg)
 
-    model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy', loss_weights=args.loss_weights)
+    model.compile(optimizer=Adam(lr=args.lr), loss=['binary_crossentropy', focal_loss(gamma=5, alpha=0.1)], loss_weights=args.loss_weights)
     print(model.summary())
 
     # Init performance
@@ -118,7 +152,7 @@ def fit(args=Args()):
         dummy_genre = np.nan_to_num(dummy_genre)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
-                         [np.array(labels), dummy_genre], # labels 
+                         [np.array(labels), dummy_genre.astype(float)], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=1, shuffle=True)
         t2 = time()
 
