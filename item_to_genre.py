@@ -15,4 +15,4 @@ def get_genre(data_size):
     return (items, genres)
 
 
-get_genre('ml-100k')
+# get_genre('ml-100k')

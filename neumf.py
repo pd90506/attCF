@@ -22,7 +22,11 @@ def init_normal(shape=[0,0.05], seed=None):
 
 
 
-def get_model(num_users, num_items, mf_dim=10, layers=[10], reg_layers=[0], reg_mf=0):
+def get_model(num_users, num_items, num_tasks=0, e_dim=10, mlp_layer=[10], reg=0):
+    layers = mlp_layer
+    reg_mf = reg
+    reg_layers = [reg, reg, reg, reg]
+    mf_dim = e_dim
     assert len(layers) == len(reg_layers)
     num_layer = len(layers) #Number of layers in the MLP
     # Input variables

@@ -105,9 +105,5 @@ venv.bak/
 .DS_Store
 .vscode/
 temp/
-Data/
-ml-1m/
-ml-100k/
-movielens/
 netflix/
-CiaoDVD/
+

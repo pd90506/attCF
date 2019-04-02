@@ -43,7 +43,8 @@ def getHitRatio(predictions, K=10):
     """calculate the hit ratio
     the first column of the predictions matrix is the real test samples
     """
-    out = np.apply_along_axis(hitFirstK, axis=1, arr=predictions)
+    hitFirstKarg = lambda x: hitFirstK(x, K=K)
+    out = np.apply_along_axis(hitFirstKarg, axis=1, arr=predictions)
     return out
 
 
@@ -59,7 +60,8 @@ def hitFirstK(array, K=10):
 
 def getNDCG(predictions, K=10):
     # TODO!!!!
-    out = np.apply_along_axis(gainFirstK, axis=1, arr=predictions)
+    gainFirstKarg = lambda x: gainFirstK(x, K=K)
+    out = np.apply_along_axis(gainFirstKarg, axis=1, arr=predictions)
     return out
 
 

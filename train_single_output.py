@@ -1,65 +1,83 @@
 # from model import get_model
 # from att_mlp_model import get_model
-from mlp_model import get_model
+# from mlp_model import get_model
+# from gmf_model import get_model
+from neumf import get_model
+import gmf_model
+import mlp_model
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
 from time import time
 from olddatasetclass import Dataset
 from evaluate import evaluate_model
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, SGD
 from item_to_genre import item_to_genre
 import pandas as pd
 from aux_loss import aux_crossentropy_loss
+from utils import get_train_instances
 
 
 class Args(object):
     """Used to generate different sets of arguments"""
     def __init__(self):
         # default vaules
+        self.model_name = 'neumf'
         self.path = 'Data/'
-        self.dataset = 'ml-1m'
-        self.epochs = 50
-        self.batch_size = 256
+        self.dataset = 'ciao'
+        self.epochs = 20
+        self.batch_size = 2048
         self.num_tasks = 18
-        self.e_dim = 8
-        self.mlp_layer = [64, 32, 16, 8]
+        self.e_dim = 32
+        self.mlp_layer = [256, 128, 64, 32]
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 0.1]
         self.K = 10
+        self.out = 1
+        self.K2 = 20
+        # self.gmf_pretrain = 'Pretrain/gmf_ml-1m_32_[256, 128, 64, 32]_1552173335.h5'
+        # self.mlp_pretrain = 'Pretrain/mlp_ml-1m_32_[256, 128, 64, 32]_1552175298.h5'
+        self.gmf_pretrain = ''
+        self.mlp_pretrain = ''
         # self.learner = 'adam' 
 
 
-def get_train_instances(train, num_negatives, num_items):
-    user_input, item_input, labels = [],[],[]
-    # num_users = train.shape[0]
-    # num_items = 1682 # 3952  ## TODO!
-    # num_items = num_items
-    for (u, i) in train.keys():
-        # positive instance
-        user_input.append(u)
-        item_input.append(i)
-        labels.append(1)
-        # negative instances
-        for t in range(num_negatives):
-            j = np.random.randint(num_items)
-            while ((u,j) in train.keys()):
-                j = np.random.randint(num_items)
-            user_input.append(u)
-            item_input.append(j)
-            labels.append(0)
-    return user_input, item_input, labels
+def load_pretrain_model(model, gmf, mlp, num_layers):
+    # MF embeddings
+    gmf_user_embeddings = gmf.get_layer('user_embedding').get_weights()
+    gmf_item_embeddings = gmf.get_layer('item_embedding').get_weights()
+    model.get_layer('mf_user_embedding').set_weights(gmf_user_embeddings)
+    model.get_layer('mf_item_embedding').set_weights(gmf_item_embeddings)
+    
+    # MLP embeddings
+    mlp_user_embeddings = mlp.get_layer('user_embedding').get_weights()
+    mlp_item_embeddings = mlp.get_layer('item_embedding').get_weights()
+    model.get_layer('mlp_user_embedding').set_weights(mlp_user_embeddings)
+    model.get_layer('mlp_item_embedding').set_weights(mlp_item_embeddings)
+    
+    # MLP layers
+    for i in range(1, num_layers):
+        mlp_layer_weights = mlp.get_layer('mlp_vector_layer_{:d}'.format(i)).get_weights()
+        model.get_layer('layer%d' %i).set_weights(mlp_layer_weights)
+        
+    # Prediction weights
+    gmf_prediction = gmf.get_layer('prediction').get_weights()
+    mlp_prediction = mlp.get_layer('prediction').get_weights()
+    new_weights = np.concatenate((gmf_prediction[0], mlp_prediction[0]), axis=0)
+    new_b = gmf_prediction[1] + mlp_prediction[1]
+    model.get_layer('prediction').set_weights([0.5*new_weights, 0.5*new_b])    
+    return model
 
 
 def fit(args=Args()):
     # args = Args()
-    result_out_file = 'outputs/%s_mlp_%s_top%d_edim%d_layer%s_%d.csv' %(args.dataset,
-                                                                         args.loss_weights, args.K, args.e_dim,args.mlp_layer, time())
+    model_out_file = 'Pretrain/%s_%s_%d_%s_%d.h5' %(args.model_name, args.dataset, args.e_dim, args.mlp_layer, time())
+    result_out_file = 'outputs/%s_%s_top%d_edim%d_layer%s_%d.csv' %(args.model_name, args.dataset,
+                                                                         args.K, args.e_dim,args.mlp_layer, time())
     topK = args.K
-    evaluation_threads = 1  # mp.cpu_count()
-    print("Att-Mul-MF arguments: %s " % (args))
+    topK2 = args.K2
+    print("%s arguments: %s " % (args.model_name, [args.dataset, args.e_dim, args.mlp_layer]))
 
     # Load data
     t1 = time()
@@ -95,8 +113,19 @@ def fit(args=Args()):
     model.compile(optimizer=Adam(lr=args.lr), loss='binary_crossentropy')
     print(model.summary())
 
+    # Load pretrain model
+    if args.gmf_pretrain != '' and args.mlp_layer != '':
+        gmf = gmf_model.get_model(num_users, num_items, args.num_tasks, e_dim=args.e_dim, mlp_layer=args.mlp_layer, reg=0)
+        gmf.load_weights(args.gmf_pretrain)
+        mlp = mlp_model.get_model(num_users, num_items, args.num_tasks, e_dim=args.e_dim, mlp_layer=args.mlp_layer, reg=0)
+        mlp.load_weights(args.mlp_pretrain)
+        model = load_pretrain_model(model, gmf, mlp, len(args.mlp_layer))
+        print("Load pretrained GMF (%s) and MLP (%s) models done. " %(args.gmf_pretrain, args.mlp_pretrain))
+
+
     # Init performance
     (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
+    (hits2, ndcgs2) = evaluate_model(model, testRatings, testNegatives, topK2)
     hr, ndcg = np.array(hits).mean(), np.array(ndcgs).mean()
     print('Init: HR = %.4f, NDCG = %.4f' % (hr, ndcg))
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
@@ -112,7 +141,7 @@ def fit(args=Args()):
     for epoch in range(int(args.epochs)):
         t1 = time()
         # Generate training instances
-        user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items)
+        user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items, args.num_neg)
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
                          [np.array(labels)], # labels 
@@ -123,11 +152,17 @@ def fit(args=Args()):
         # Evaluation
         if epoch %1 == 0:
             (hits, ndcgs) = evaluate_model(model, testRatings, testNegatives, topK)
+            (hits2, ndcgs2) = evaluate_model(model, testRatings, testNegatives, topK2)
             hr, ndcg, loss = np.array(hits).mean(), np.array(ndcgs).mean(), hist.history['loss'][0]
+            hr2, ndcg2 = np.array(hits2).mean(), np.array(ndcgs2).mean()
             print('Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
                   % (epoch,  t2-t1, hr, ndcg, loss, time()-t2))
+            print('K2 Iteration %d [%.1f s]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1f s]' 
+                  % (epoch,  t2-t1, hr2, ndcg2, loss, time()-t2))
             if hr > best_hr:
                 best_hr, best_ndcg, best_iter = hr, ndcg, epoch
+                if args.out > 0:
+                    model.save_weights(model_out_file, overwrite=True)
             
             output.loc[epoch+1] = [hr, ndcg, loss]
 

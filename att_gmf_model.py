@@ -122,6 +122,11 @@ def get_model(num_users, num_items, num_tasks,
         kernel_initializer='lecun_uniform',
         kernel_regularizer=keras.regularizers.l2(reg),
         name='prediction')(pred_vector)
+    # att_pred = keras.layers.Dense(
+    #     units=1, activation='sigmoid',
+    #     kernel_initializer='lecun_uniform',
+    #     kernel_regularizer=keras.regularizers.l2(reg),
+    #     name='att_pred')(att_vector)
 
     model = keras.models.Model(inputs=[user_input, item_input],
                                outputs=[prediction, item_outputs])
