@@ -1,6 +1,5 @@
 import tensorflow.keras as keras
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Lambda
 
 
 def init_normal(shape=[0, 0.05], seed=None):
@@ -14,7 +13,7 @@ def normalize(tensor):
     return tensor
 
 
-def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
+def get_model(num_users, num_items, num_tasks, e_dim=16, mlp_layer=[32], reg=0):
     """
     This function is used to get the Att-Mul-MF model described
     in the paper.
@@ -26,80 +25,105 @@ def get_model(num_users, num_items, num_tasks, e_dim=16, f_dim=8, reg=0):
         :param f_dim: the preference feature space dimension
         :param reg: regularization coefficient
     """
+    num_layer = len(mlp_layer)
     # Input variables
     user_input = keras.layers.Input(shape=(1,), dtype='int32',
                                     name='user_input')
     item_input = keras.layers.Input(shape=(1,), dtype='int32',
                                     name='item_input')
 
-    # Embedding layer
+    gmf_user_embedding = keras.layers.Embedding(
+        input_dim=num_users, output_dim=int(e_dim),
+        name='gmf_user_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)
+
+    gmf_item_embedding = keras.layers.Embedding(
+        input_dim=num_items, output_dim=int(e_dim),
+        name='gmf_item_embedding',
+        embeddings_initializer=init_normal(),
+        embeddings_regularizer=keras.regularizers.l2(reg),
+        input_length=1)
+
     user_embedding = keras.layers.Embedding(
-        input_dim=num_users, output_dim=e_dim, name='user_embedding',
+        input_dim=num_users, output_dim=int(mlp_layer[0]/2),
+        name='user_embedding',
         embeddings_initializer=init_normal(),
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
     item_embedding = keras.layers.Embedding(
-        input_dim=num_items, output_dim=e_dim, name='item_embedding',
+        input_dim=num_items, output_dim=int(mlp_layer[0]/2),
+        name='item_embedding',
         embeddings_initializer=init_normal(),
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
     # Flatten the output tensor
+    gmf_user_latent = keras.layers.Flatten()(gmf_user_embedding(user_input))
+    gmf_item_latent = keras.layers.Flatten()(gmf_item_embedding(item_input))
     user_latent = keras.layers.Flatten()(user_embedding(user_input))
     item_latent = keras.layers.Flatten()(item_embedding(item_input))
 
-    # Element-wise product
-    mf_vector = keras.layers.Multiply()([user_latent, item_latent])
+    # GMF part
+    gmf_vector = keras.layers.Multiply(name='gmf_multiply')([gmf_user_latent, gmf_item_latent])
 
-    # User feature and item multitask feature
-    user_feature = keras.layers.Dense(
-        units=f_dim, kernel_regularizer=keras.regularizers.l2(reg),
-        activation='relu', name='user_feature')(user_latent)
-    # Create *num_tasks* parallel layers for all genres
-    item_feature_list = []
-    # Define the multitask output for auxiliary supervision
-    item_output_list = []
-    # Attention weights list
-    att_weight_list = []
-    # Construct multitask features and outputs
-    for idx in range(num_tasks):
-        item_feature = keras.layers.Dense(
-            f_dim, activation='relu', name='item_feature%d' % idx)(mf_vector)
-        item_feature_list.append(item_feature)
-        item_output = keras.layers.Dense(
-            1, activation='sigmoid', kernel_initializer='lecun_uniform',
-            name='item_output%d' % idx)(item_feature)
-        item_output_list.append(item_output)
-        # Produce attention weights vector via inner products between
-        # user feature vector and item feature vectors
-        att_weight = keras.layers.Dot(axes=-1)([user_feature, item_feature])
-        att_weight_list.append(att_weight)
+    mlp_vector = keras.layers.Concatenate(name='mlp_concatenation')([user_latent, item_latent])
 
-    # Convert lists to vectors
-    item_output_vector = keras.layers.Concatenate()(item_output_list)
-    att_weight_vector = keras.layers.Concatenate()(att_weight_list)
-    att_weight_vector = Lambda(normalize)(att_weight_vector)
-    # TODO: WATCHOUT! which axis?
-    item_feature_list = [keras.layers.Reshape(
-        (f_dim, 1))(x) for x in item_feature_list]
-    item_feature_tensor = keras.layers.concatenate(item_feature_list, axis=-1)
+    # item vector feature extraction, split at the last layer
+    for idx in range(2, num_layer-1):
+        layer = keras.layers.Dense(
+            units=mlp_layer[idx],
+            activation='relu',
+            kernel_initializer='lecun_uniform',
+            kernel_regularizer=keras.regularizers.l2(reg),
+            name='mlp_item_layer_{:d}'.format(idx))
+        item_latent = layer(item_latent)
 
-    # Weighted sum of different genres features based on attention weights
-    weighted_sum = keras.layers.Dot(axes=-1)(
-        [att_weight_vector, item_feature_tensor])
+    item_vector = keras.layers.Dense(
+        units=num_tasks*mlp_layer[-1],
+        activation='relu',
+        kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
+        name='item_vector')(item_latent)
+    item_vector = keras.layers.Reshape(
+        (num_tasks, mlp_layer[-1]), name='multitask_item_vector')(item_vector)
 
-    weighted_sum = keras.layers.Flatten()(weighted_sum)
-    final_layer = keras.layers.Concatenate()([user_feature, weighted_sum])
+    # mlp vector feature extraction, no split
+    for idx in range(1, num_layer):
+        layer = keras.layers.Dense(
+            units=mlp_layer[idx],
+            activation='relu',
+            kernel_initializer='lecun_uniform',
+            kernel_regularizer=keras.regularizers.l2(reg),
+            name='mlp_vector_layer_{:d}'.format(idx))
+        mlp_vector = layer(mlp_vector)
 
-    # Final layer with sigmoid activation
-    prediction = keras.layers.Dense(1, activation='sigmoid',
-                                    kernel_initializer='lecun_uniform',
-                                    name='prediction')(final_layer)
+    weight_vector = keras.layers.Dot(axes=-1, normalize=True)(
+        [item_vector, mlp_vector])
+    weight_vector = keras.layers.Flatten(name='weight_flatten')(weight_vector)
+    att_vector = keras.layers.Dot(axes=(-1, -2))([weight_vector, item_vector])
+    att_vector = keras.layers.Flatten(name='attention_layer')(att_vector)
 
-    # Construct model
+    #  Concatenate gmf_vector and att_vector
+    pred_vector = keras.layers.Concatenate()([mlp_vector, att_vector])
+    pred_vector = keras.layers.Concatenate(name='gmf_mlp_concat')([gmf_vector, pred_vector])
+
+    prediction = keras.layers.Dense(
+        units=1, activation='sigmoid',
+        kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
+        name='prediction')(pred_vector)
+
+    aux_vector = keras.layers.Dense(
+        units=1, activation='sigmoid',
+        kernel_initializer='lecun_uniform',
+        kernel_regularizer=keras.regularizers.l2(reg),
+        name='aux_vector')(item_vector)
+    aux_vector = keras.layers.Flatten(name='aux_output')(aux_vector)
+
     model = keras.models.Model(inputs=[user_input, item_input],
-                               outputs=[prediction, item_output_vector])
+                               outputs=[prediction, aux_vector])
+
     return model
-
-
