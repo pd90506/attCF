@@ -26,12 +26,12 @@ class Args(object):
     """Used to generate different sets of arguments"""
     def __init__(self):
         # default vaules
-        self.model_name = 'att_user'
+        self.model_name = 'att_cf'
         self.path = 'Data/'
-        self.dataset = 'ciao'
+        self.dataset = 'ml-1m'
         self.epochs = 20
-        self.batch_size = 256
-        self.num_tasks = 17
+        self.batch_size = 1024
+        self.num_tasks = 18
         self.e_dim = 32
         self.mlp_layer = [256, 128, 64, 32]
         self.reg = 0
