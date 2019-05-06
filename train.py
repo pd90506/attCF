@@ -3,11 +3,12 @@
 # from att_gmf_model import get_model
 # from att_neumf_model import get_model
 # from att_cf import get_model
-from att_user_model import get_model
-import att_gmf_model
-import att_mlp_model
+# from att_user_model import get_model
+# import att_gmf_model
+# import att_mlp_model
 # from no_att_model import get_model
 # from att_only import get_model
+from att_cf import get_model
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 import numpy as np
@@ -25,18 +26,18 @@ class Args(object):
     """Used to generate different sets of arguments"""
     def __init__(self):
         # default vaules
-        self.model_name = 'att_user'
+        self.model_name = 'att_cf'
         self.path = 'Data/'
         self.dataset = 'ml-1m'
         self.epochs = 20
-        self.batch_size = 2048
+        self.batch_size = 1024
         self.num_tasks = 18
-        self.e_dim = 64
-        self.mlp_layer = [512, 256, 128, 64]
+        self.e_dim = 32
+        self.mlp_layer = [256, 128, 64, 32]
         self.reg = 0
         self.num_neg = 4
         self.lr = 0.001
-        self.loss_weights = [1, 1]
+        self.loss_weights = [1, 1, 1]
         self.K = 10
         self.K2 = 20
         self.out = 1
@@ -164,7 +165,7 @@ def fit(args=Args()):
     best_hr, best_ndcg, best_iter = hr, ndcg, -1
 
     #dummy_genre = np.random.randn(4970845, args.num_tasks)
-
+    
     # save Hit ratio and ndcg, loss
     output = pd.DataFrame(columns=['hr', 'ndcg', 'loss'])
     loss = 1.0 ## TODO
@@ -177,9 +178,10 @@ def fit(args=Args()):
         user_input, item_input, labels = get_train_instances(train, args.num_neg, num_items, args.num_neg)
         dummy_genre = item_to_genre(item_input, data_size=args.dataset).values
         dummy_genre = np.nan_to_num(dummy_genre)
+        dummy_sim = np.zeros(len(user_input))
          # Training
         hist = model.fit([np.array(user_input), np.array(item_input)], #input
-                         [np.array(labels), dummy_genre], # labels 
+                         [np.array(labels), dummy_genre, dummy_sim], # labels 
                          batch_size=args.batch_size, epochs=1, verbose=1, shuffle=True)
         t2 = time()
 

@@ -48,17 +48,17 @@ def get_model(num_users, num_items, num_tasks,
         embeddings_regularizer=keras.regularizers.l2(reg),
         input_length=1)
 
-    aux_item_embedding = keras.layers.Embedding(
-        input_dim=num_items, output_dim=int(mlp_layer[0]),
-        name='aux_item_embedding',
-        embeddings_initializer=init_normal(),
-        embeddings_regularizer=keras.regularizers.l2(reg),
-        input_length=1)
+    # aux_item_embedding = keras.layers.Embedding(
+    #     input_dim=num_items, output_dim=int(mlp_layer[0]),
+    #     name='aux_item_embedding',
+    #     embeddings_initializer=init_normal(),
+    #     embeddings_regularizer=keras.regularizers.l2(reg),
+    #     input_length=1)
 
     # Flatten the output tensor
     user_latent = keras.layers.Flatten()(user_embedding(user_input))
     item_latent = keras.layers.Flatten()(item_embedding(item_input))
-    aux_item_latent = keras.layers.Flatten()(aux_item_embedding(item_input))
+    # aux_item_latent = keras.layers.Flatten()(aux_item_embedding(item_input))
 
     # GMF layer
     gmf_vector = keras.layers.Multiply()([user_latent, item_latent])
@@ -78,13 +78,13 @@ def get_model(num_users, num_items, num_tasks,
     item_feature_list = []  # all item features are stored here
     for idx in range(0, num_tasks):
         layer = keras.layers.Dense(
-            units=mlp_layer[-1],
+            units=e_dim,
             activation='relu',
             kernel_initializer='lecun_uniform',
             kernel_regularizer=keras.regularizers.l2(reg),
             name='item_task_feature_{:d}'.format(idx))
 
-        item_feature = layer(aux_item_latent)
+        item_feature = layer(item_latent)
         item_feature_list.append(item_feature)
 
     item_out_list = []   # all item outputs are stored here
@@ -112,16 +112,19 @@ def get_model(num_users, num_items, num_tasks,
     weight_vector = keras.layers.Activation('softmax')(weight_vector)
     att_vector = keras.layers.Dot(axes=(-1, -2), name='attention_layer')(
         [weight_vector, item_feature_matrix])
+    
+    subtracted_vector = keras.layers.Subtract()([gmf_vector, att_vector])
+    subtracted_out = keras.layers.Dot(axes=(-1, -1), name='l2_norm')([subtracted_vector, subtracted_vector])
     # att_vector = keras.layers.Flatten(name='attention_layer')(att_vector)
 
     #  Concatenate mlp_vector and att_vector
-    pred_vector = keras.layers.Concatenate()([gmf_vector, att_vector])
+    # pred_vector = keras.layers.Concatenate()([gmf_vsector, att_vector])
 
     prediction = keras.layers.Dense(
         units=1, activation='sigmoid',
         kernel_initializer='lecun_uniform',
         kernel_regularizer=keras.regularizers.l2(reg),
-        name='prediction')(pred_vector)
+        name='prediction')(gmf_vector)
     # att_pred = keras.layers.Dense(
     #     units=1, activation='sigmoid',
     #     kernel_initializer='lecun_uniform',
@@ -129,6 +132,6 @@ def get_model(num_users, num_items, num_tasks,
     #     name='att_pred')(att_vector)
 
     model = keras.models.Model(inputs=[user_input, item_input],
-                               outputs=[prediction, item_outputs])
+                               outputs=[prediction, item_outputs, subtracted_out])
 
     return model
